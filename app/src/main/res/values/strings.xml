@@ -138,10 +138,8 @@
     <string name="settings_worker_off_sub">Tap Fix to reschedule</string>
     <string name="settings_worker_fix">Fix</string>
     <string name="settings_notif_preview_label">Notification preview</string>
-    <string name="settings_notif_show_count_title">Show item count in title</string>
-    <string name="settings_notif_show_count_body">e.g. "2 items expiring soon"</string>
-    <string name="settings_notif_show_days_title">Show days remaining</string>
-    <string name="settings_notif_show_days_body">e.g. "Milk (tomorrow)"</string>
+    <string name="settings_notif_grouped_title">Group into one notification</string>
+    <string name="settings_notif_grouped_body">Off: send a separate alert per item</string>
 
     <!-- Filter & Sort sheet -->
     <string name="filter_sort_title">Filter &amp; Sort</string>

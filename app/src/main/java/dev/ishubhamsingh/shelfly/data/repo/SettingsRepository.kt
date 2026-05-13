@@ -14,11 +14,10 @@ class SettingsRepository @Inject constructor(
 ) {
     val settings: Flow<Settings> = dataStore.data.map { prefs ->
         Settings(
-            defaultLeadTimeDays = prefs[DataStoreKeys.LEAD_TIME_DAYS]   ?: Settings().defaultLeadTimeDays,
-            dynamicColor        = prefs[DataStoreKeys.DYNAMIC_COLOR]    ?: Settings().dynamicColor,
-            quietHours          = prefs[DataStoreKeys.QUIET_HOURS]      ?: Settings().quietHours,
-            notifShowCount      = prefs[DataStoreKeys.NOTIF_SHOW_COUNT] ?: Settings().notifShowCount,
-            notifShowDays       = prefs[DataStoreKeys.NOTIF_SHOW_DAYS]  ?: Settings().notifShowDays,
+            defaultLeadTimeDays = prefs[DataStoreKeys.LEAD_TIME_DAYS] ?: Settings().defaultLeadTimeDays,
+            dynamicColor        = prefs[DataStoreKeys.DYNAMIC_COLOR]  ?: Settings().dynamicColor,
+            quietHours          = prefs[DataStoreKeys.QUIET_HOURS]    ?: Settings().quietHours,
+            notifGrouped        = prefs[DataStoreKeys.NOTIF_GROUPED]  ?: Settings().notifGrouped,
         )
     }
 
@@ -42,11 +41,7 @@ class SettingsRepository @Inject constructor(
         dataStore.edit { prefs -> prefs[DataStoreKeys.ONBOARDING_DONE] = true }
     }
 
-    suspend fun setNotifShowCount(enabled: Boolean) {
-        dataStore.edit { prefs -> prefs[DataStoreKeys.NOTIF_SHOW_COUNT] = enabled }
-    }
-
-    suspend fun setNotifShowDays(enabled: Boolean) {
-        dataStore.edit { prefs -> prefs[DataStoreKeys.NOTIF_SHOW_DAYS] = enabled }
+    suspend fun setNotifGrouped(enabled: Boolean) {
+        dataStore.edit { prefs -> prefs[DataStoreKeys.NOTIF_GROUPED] = enabled }
     }
 }

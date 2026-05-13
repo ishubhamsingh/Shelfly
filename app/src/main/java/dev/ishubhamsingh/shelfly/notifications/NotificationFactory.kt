@@ -33,65 +33,60 @@ fun Context.ensureNotificationChannel() {
 
 // ── Shared formatting ──────────────────────────────────────────────────────────
 
-fun Context.formatExpiryContent(
-    items: List<Item>,
-    showCount: Boolean,
-    showDays: Boolean,
-): Pair<String, String> {
-    val title = when {
-        showCount && items.size == 1 -> getString(R.string.notif_title_singular)
-        showCount                    -> getString(R.string.notif_title_plural, items.size)
-        else                         -> getString(R.string.notif_title_no_count)
-    }
+private fun Context.formatExpiryContent(items: List<Item>): Pair<String, String> {
+    val title = if (items.size == 1)
+        getString(R.string.notif_title_singular)
+    else
+        getString(R.string.notif_title_plural, items.size)
+
     val body = items.take(3).joinToString(", ") { item ->
-        if (showDays) {
-            val days  = item.daysUntilExpiry
-            val label = when {
-                days <= 0L -> getString(R.string.notif_body_today)
-                days == 1L -> getString(R.string.notif_body_tomorrow)
-                else       -> getString(R.string.notif_body_in_days, days)
-            }
-            "${item.name} ($label)"
-        } else {
-            item.name
+        val days  = item.daysUntilExpiry
+        val label = when {
+            days <= 0L -> getString(R.string.notif_body_today)
+            days == 1L -> getString(R.string.notif_body_tomorrow)
+            else       -> getString(R.string.notif_body_in_days, days)
         }
+        "${item.name} ($label)"
     }
     return title to body
 }
 
+private fun Context.formatSingleExpiryContent(item: Item): Pair<String, String> {
+    val days  = item.daysUntilExpiry
+    val label = when {
+        days <= 0L -> getString(R.string.notif_body_today)
+        days == 1L -> getString(R.string.notif_body_tomorrow)
+        else       -> getString(R.string.notif_body_in_days, days)
+    }
+    return getString(R.string.notif_title_singular) to "${item.name} ($label)"
+}
+
 // ── Notification builders ──────────────────────────────────────────────────────
 
-fun Context.buildExpiryNotification(
-    items: List<Item>,
-    showCount: Boolean = true,
-    showDays: Boolean  = true,
-): android.app.Notification {
-    val (title, body) = formatExpiryContent(items, showCount, showDays)
+/** Single grouped notification for all expiring items. */
+fun Context.buildExpiryNotification(items: List<Item>): android.app.Notification {
+    val (title, body) = formatExpiryContent(items)
     return buildNotification(title, body, items.take(3).map { it.name to it.category })
 }
 
-fun Context.buildTestNotification(
-    showCount: Boolean = true,
-    showDays: Boolean  = true,
-): android.app.Notification {
-    val title = if (showCount)
-        getString(R.string.notif_title_plural, 2)
-    else
-        getString(R.string.notif_title_no_count)
+/**
+ * One notification per item for separate (ungrouped) mode.
+ * Returns a list of (notificationId, notification) pairs.
+ */
+fun Context.buildSeparateNotifications(items: List<Item>): List<Pair<Int, android.app.Notification>> =
+    items.mapIndexed { index, item ->
+        val (title, body) = formatSingleExpiryContent(item)
+        val notification  = buildNotification(title, body, listOf(item.name to item.category))
+        (NOTIF_ID + 1 + index) to notification
+    }
 
+fun Context.buildTestNotification(): android.app.Notification {
     val item1 = getString(R.string.notif_preview_item1)
     val item2 = getString(R.string.notif_preview_item2)
-    val body = if (showDays)
-        "$item1 (${getString(R.string.notif_body_tomorrow)}), " +
-        "$item2 (${getString(R.string.notif_body_in_days, 5L)})"
-    else
-        "$item1, $item2"
-
-    // Two food-category sample items for the chip row
-    val sampleChips = listOf(
-        item1 to Category.FOOD,
-        item2 to Category.FOOD,
-    )
+    val title = getString(R.string.notif_title_plural, 2)
+    val body  = "$item1 (${getString(R.string.notif_body_tomorrow)}), " +
+                "$item2 (${getString(R.string.notif_body_in_days, 5L)})"
+    val sampleChips = listOf(item1 to Category.FOOD, item2 to Category.FOOD)
     return buildNotification(title, body, sampleChips)
 }
 

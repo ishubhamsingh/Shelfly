@@ -19,18 +19,14 @@ class ImmediateNotifier @Inject constructor(
         if (status != ItemStatus.EXPIRING_SOON && status != ItemStatus.EXPIRED) return
 
         context.ensureNotificationChannel()
-        val notification = context.buildExpiryNotification(
-            items      = listOf(item),
-            showCount  = settings.notifShowCount,
-            showDays   = settings.notifShowDays,
-        )
+        val notification = context.buildExpiryNotification(listOf(item))
         context.getSystemService(NotificationManager::class.java)
             .notify(item.id.hashCode(), notification)
     }
 
-    fun sendTestNotification(showCount: Boolean = true, showDays: Boolean = true) {
+    fun sendTestNotification() {
         context.ensureNotificationChannel()
-        val notification = context.buildTestNotification(showCount, showDays)
+        val notification = context.buildTestNotification()
         context.getSystemService(NotificationManager::class.java)
             .notify(NOTIF_TEST_ID, notification)
     }

@@ -55,19 +55,14 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settingsRepo.setQuietHours(enabled) }
     }
 
-    fun setNotifShowCount(enabled: Boolean) {
-        viewModelScope.launch { settingsRepo.setNotifShowCount(enabled) }
-    }
-
-    fun setNotifShowDays(enabled: Boolean) {
-        viewModelScope.launch { settingsRepo.setNotifShowDays(enabled) }
+    fun setNotifGrouped(enabled: Boolean) {
+        viewModelScope.launch { settingsRepo.setNotifGrouped(enabled) }
     }
 
     // ── Notifications ──────────────────────────────────────────────────────────
 
     fun sendTestNotification() {
-        val s = settings.value
-        notifier.sendTestNotification(showCount = s.notifShowCount, showDays = s.notifShowDays)
+        notifier.sendTestNotification()
     }
 
     fun checkWorkerStatus() {

@@ -30,14 +30,14 @@ class ExpiryWorker @AssistedInject constructor(
         if (expiring.isEmpty()) return Result.success()
 
         applicationContext.ensureNotificationChannel()
-        val notification = applicationContext.buildExpiryNotification(
-            items     = expiring,
-            showCount = settings.notifShowCount,
-            showDays  = settings.notifShowDays,
-        )
-        applicationContext
-            .getSystemService(NotificationManager::class.java)
-            .notify(NOTIF_ID, notification)
+        val mgr = applicationContext.getSystemService(NotificationManager::class.java)
+        if (settings.notifGrouped) {
+            mgr.notify(NOTIF_ID, applicationContext.buildExpiryNotification(expiring))
+        } else {
+            applicationContext.buildSeparateNotifications(expiring).forEach { (id, notif) ->
+                mgr.notify(id, notif)
+            }
+        }
 
         return Result.success()
     }

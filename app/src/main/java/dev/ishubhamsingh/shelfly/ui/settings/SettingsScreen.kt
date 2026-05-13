@@ -163,27 +163,17 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(modifier = Modifier.height(8.dp))
-                    NotificationPreviewCard(
-                        showCount = settings.notifShowCount,
-                        showDays  = settings.notifShowDays,
-                    )
+                    NotificationPreviewCard()
                 }
 
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp))
 
-                // Format toggles
+                // Group toggle
                 SwitchRow(
-                    title           = stringResource(R.string.settings_notif_show_count_title),
-                    subtitle        = stringResource(R.string.settings_notif_show_count_body),
-                    checked         = settings.notifShowCount,
-                    onCheckedChange = viewModel::setNotifShowCount,
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp))
-                SwitchRow(
-                    title           = stringResource(R.string.settings_notif_show_days_title),
-                    subtitle        = stringResource(R.string.settings_notif_show_days_body),
-                    checked         = settings.notifShowDays,
-                    onCheckedChange = viewModel::setNotifShowDays,
+                    title           = stringResource(R.string.settings_notif_grouped_title),
+                    subtitle        = stringResource(R.string.settings_notif_grouped_body),
+                    checked         = settings.notifGrouped,
+                    onCheckedChange = viewModel::setNotifGrouped,
                 )
 
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp))
@@ -299,24 +289,14 @@ fun SettingsScreen(
 // ── Mock notification preview card ────────────────────────────────────────────
 
 @Composable
-private fun NotificationPreviewCard(
-    showCount: Boolean,
-    showDays: Boolean,
-) {
+private fun NotificationPreviewCard() {
     val item1    = stringResource(R.string.notif_preview_item1)
     val item2    = stringResource(R.string.notif_preview_item2)
     val tomorrow = stringResource(R.string.notif_body_tomorrow)
     val inDays   = stringResource(R.string.notif_body_in_days, 5)
 
-    val title = if (showCount)
-        stringResource(R.string.notif_title_plural, 2)
-    else
-        stringResource(R.string.notif_title_no_count)
-
-    val body = if (showDays)
-        "$item1 ($tomorrow), $item2 ($inDays). Tap to review."
-    else
-        "$item1, $item2. Tap to review."
+    val title = stringResource(R.string.notif_title_plural, 2)
+    val body  = "$item1 ($tomorrow), $item2 ($inDays). Tap to review."
 
     Surface(
         shape           = MaterialTheme.shapes.large,

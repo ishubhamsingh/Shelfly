@@ -8,6 +8,5 @@ object DataStoreKeys {
     val DYNAMIC_COLOR     = booleanPreferencesKey("dynamic_color")
     val QUIET_HOURS       = booleanPreferencesKey("quiet_hours")
     val ONBOARDING_DONE   = booleanPreferencesKey("onboarding_done")
-    val NOTIF_SHOW_COUNT  = booleanPreferencesKey("notif_show_count")
-    val NOTIF_SHOW_DAYS   = booleanPreferencesKey("notif_show_days")
+    val NOTIF_GROUPED     = booleanPreferencesKey("notif_grouped")
 }
