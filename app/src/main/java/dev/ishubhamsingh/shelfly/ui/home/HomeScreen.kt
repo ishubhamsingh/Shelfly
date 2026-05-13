@@ -43,12 +43,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
-import java.time.ZoneId
-import java.time.temporal.ChronoUnit
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -287,14 +287,20 @@ private fun ItemCard(
                 }
                 StatusBadge(status = status, label = badgeLabel)
             }
-            // Shelf-life bar: full when added, empty at expiry (lifespan-relative)
-            val totalDays = ChronoUnit.DAYS.between(
-                item.createdAt.atZone(ZoneId.systemDefault()).toLocalDate(),
-                item.expiryDate,
-            ).toFloat().coerceAtLeast(1f)
+            // Danger meter: fills as expiry approaches — empty = plenty of time, full = expired
             val progressFraction = when {
-                status == ItemStatus.CONSUMED || status == ItemStatus.EXPIRED -> 0f
-                else -> (item.daysUntilExpiry.toFloat() / totalDays).coerceIn(0f, 1f)
+                status == ItemStatus.CONSUMED -> 0f
+                status == ItemStatus.EXPIRED  -> 1f
+                else -> {
+                    val d = item.daysUntilExpiry.toFloat().coerceAtLeast(0f)
+                    val safe = when {
+                        d <= 7f  -> (d / 7f) * 0.25f
+                        d <= 30f -> 0.25f + ((d - 7f) / 23f) * 0.25f
+                        d <= 90f -> 0.50f + ((d - 30f) / 60f) * 0.25f
+                        else     -> 0.75f + (d.coerceAtMost(365f) / 365f) * 0.25f
+                    }
+                    1f - safe
+                }
             }
             Spacer(modifier = Modifier.height(10.dp))
             Box(
@@ -304,14 +310,16 @@ private fun ItemCard(
                     .height(3.dp),
             ) {
                 LinearProgressIndicator(
-                    progress         = { progressFraction },
-                    modifier         = Modifier.fillMaxSize(),
-                    trackColor       = MaterialTheme.colorScheme.surfaceContainerHighest,
-                    color            = when (status) {
+                    progress          = { progressFraction },
+                    modifier          = Modifier.fillMaxSize(),
+                    trackColor        = MaterialTheme.colorScheme.surfaceContainerHighest,
+                    color             = when (status) {
                         ItemStatus.GOOD          -> MaterialTheme.colorScheme.primary
                         ItemStatus.EXPIRING_SOON -> MaterialTheme.colorScheme.tertiary
                         else                     -> MaterialTheme.colorScheme.error
                     },
+                    drawStopIndicator = {},
+                    gapSize           = 0.dp,
                 )
             }
             Spacer(modifier = Modifier.height(12.dp))
@@ -326,7 +334,7 @@ private fun EmptyState(modifier: Modifier = Modifier) {
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(modifier = Modifier.weight(1f))
-        ShelfIllustration(modifier = Modifier.size(160.dp))
+        ShelfIllustration(modifier = Modifier.size(width = 176.dp, height = 144.dp))
         Spacer(modifier = Modifier.height(28.dp))
         Text(
             text  = stringResource(R.string.home_empty_title),
@@ -348,80 +356,60 @@ private fun EmptyState(modifier: Modifier = Modifier) {
 
 @Composable
 private fun ShelfIllustration(modifier: Modifier = Modifier) {
-    val primary          = MaterialTheme.colorScheme.primary
-    val primaryContainer = MaterialTheme.colorScheme.primaryContainer
-    val onPrimary        = MaterialTheme.colorScheme.onPrimary
-    val surfaceHigh      = MaterialTheme.colorScheme.surfaceContainerHigh
+    val isDark = isSystemInDarkTheme()
 
+    val bgColor     = if (isDark) Color(0xFF1A1C14) else Color(0xFFF5F6EE)
+    val shelfColor  = if (isDark) Color(0xFF282B22) else Color(0xFFE9EBE2)
+    val greenColor  = if (isDark) Color(0xFF275111) else Color(0xFFC0F0A1)
+    val amberColor  = if (isDark) Color(0xFF5E4200) else Color(0xFFFFDEA8)
+    val mutedColor  = if (isDark) Color(0xFF3F4A35) else Color(0xFFDAE8C9)
+    val checkStroke = if (isDark) Color(0xFFC0F0A1) else Color(0xFF0E2300)
+
+    // SVG viewBox is 220×180 — scale uniformly to fit the canvas
     Canvas(modifier = modifier) {
-        val w = size.width
-        val h = size.height
+        val s  = minOf(size.width / 220f, size.height / 180f)
+        val ox = (size.width  - 220f * s) / 2f
+        val oy = (size.height - 180f * s) / 2f
 
-        // ── Shelf boards ──────────────────────────────────────────────────────
-        drawRoundRect(
-            color        = surfaceHigh,
-            topLeft      = Offset(w * 0.08f, h * 0.61f),
-            size         = Size(w * 0.84f, h * 0.07f),
-            cornerRadius = CornerRadius(12f),
-        )
-        drawRoundRect(
-            color        = surfaceHigh,
-            topLeft      = Offset(w * 0.18f, h * 0.33f),
-            size         = Size(w * 0.60f, h * 0.07f),
-            cornerRadius = CornerRadius(12f),
-        )
+        fun x(v: Float)  = ox + v * s
+        fun y(v: Float)  = oy + v * s
+        fun sz(v: Float) = v * s
+        fun cr(v: Float) = CornerRadius(sz(v))
 
-        // ── Items on bottom shelf ─────────────────────────────────────────────
-        // Tall bottle (primary)
-        drawRoundRect(
-            color        = primary,
-            topLeft      = Offset(w * 0.17f, h * 0.40f),
-            size         = Size(w * 0.13f, h * 0.21f),
-            cornerRadius = CornerRadius(10f),
-        )
-        // Short jar (container)
-        drawRoundRect(
-            color        = primaryContainer,
-            topLeft      = Offset(w * 0.36f, h * 0.46f),
-            size         = Size(w * 0.13f, h * 0.15f),
-            cornerRadius = CornerRadius(8f),
-        )
-        // Slim bottle (muted)
-        drawRoundRect(
-            color        = primary.copy(alpha = 0.4f),
-            topLeft      = Offset(w * 0.56f, h * 0.44f),
-            size         = Size(w * 0.10f, h * 0.17f),
-            cornerRadius = CornerRadius(10f),
-        )
+        // Background
+        drawRoundRect(color = bgColor, topLeft = Offset(x(10f), y(10f)), size = Size(sz(200f), sz(160f)), cornerRadius = cr(12f))
 
-        // ── Items on top shelf ────────────────────────────────────────────────
-        drawRoundRect(
-            color        = primaryContainer,
-            topLeft      = Offset(w * 0.27f, h * 0.16f),
-            size         = Size(w * 0.12f, h * 0.17f),
-            cornerRadius = CornerRadius(8f),
-        )
-        drawRoundRect(
-            color        = primary.copy(alpha = 0.65f),
-            topLeft      = Offset(w * 0.46f, h * 0.18f),
-            size         = Size(w * 0.10f, h * 0.15f),
-            cornerRadius = CornerRadius(8f),
-        )
+        // Shelf boards
+        drawRoundRect(color = shelfColor, topLeft = Offset(x(22f), y(56f)),  size = Size(sz(176f), sz(8f)), cornerRadius = cr(2f))
+        drawRoundRect(color = shelfColor, topLeft = Offset(x(22f), y(112f)), size = Size(sz(176f), sz(8f)), cornerRadius = cr(2f))
 
-        // ── Green checkmark circle ────────────────────────────────────────────
-        val cx = w * 0.74f
-        val cy = h * 0.73f
-        val r  = w * 0.13f
-        drawCircle(color = primary, radius = r, center = Offset(cx, cy))
+        // Top shelf — green bottle body + neck
+        drawRoundRect(color = greenColor, topLeft = Offset(x(44f), y(28f)), size = Size(sz(28f), sz(28f)), cornerRadius = cr(4f))
+        drawRoundRect(color = greenColor, topLeft = Offset(x(48f), y(22f)), size = Size(sz(20f), sz(8f)),  cornerRadius = cr(2f))
+
+        // Top shelf — amber tall bottle + neck
+        drawRoundRect(color = amberColor, topLeft = Offset(x(86f), y(20f)), size = Size(sz(18f), sz(36f)), cornerRadius = cr(4f))
+        drawRect(     color = amberColor, topLeft = Offset(x(92f), y(14f)), size = Size(sz(6f),  sz(8f)))
+
+        // Top shelf — muted box
+        drawRoundRect(color = mutedColor, topLeft = Offset(x(120f), y(34f)), size = Size(sz(34f), sz(22f)), cornerRadius = cr(3f))
+
+        // Bottom shelf — amber box
+        drawRoundRect(color = amberColor, topLeft = Offset(x(40f),  y(80f)), size = Size(sz(40f), sz(32f)), cornerRadius = cr(4f))
+        // Bottom shelf — green jar
+        drawRoundRect(color = greenColor, topLeft = Offset(x(96f),  y(84f)), size = Size(sz(22f), sz(28f)), cornerRadius = cr(3f))
+        // Bottom shelf — muted tall
+        drawRoundRect(color = mutedColor, topLeft = Offset(x(132f), y(76f)), size = Size(sz(26f), sz(36f)), cornerRadius = cr(4f))
+
+        // Check circle
+        drawCircle(color = greenColor, radius = sz(14f), center = Offset(x(186f), y(40f)))
+
+        // Checkmark
         val checkPath = Path().apply {
-            moveTo(cx - r * 0.44f, cy + r * 0.02f)
-            lineTo(cx - r * 0.06f, cy + r * 0.40f)
-            lineTo(cx + r * 0.50f, cy - r * 0.28f)
+            moveTo(x(180f), y(41f))
+            lineTo(x(184f), y(45f))
+            lineTo(x(192f), y(36f))
         }
-        drawPath(
-            path  = checkPath,
-            color = onPrimary,
-            style = Stroke(width = w * 0.045f, cap = StrokeCap.Round, join = StrokeJoin.Round),
-        )
+        drawPath(checkPath, color = checkStroke, style = Stroke(width = sz(2.4f), cap = StrokeCap.Round, join = StrokeJoin.Round))
     }
 }
