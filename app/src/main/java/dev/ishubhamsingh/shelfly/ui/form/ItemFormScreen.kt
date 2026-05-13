@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
@@ -56,11 +57,14 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ishubhamsingh.shelfly.R
 import dev.ishubhamsingh.shelfly.domain.model.Category
+import dev.ishubhamsingh.shelfly.domain.model.ItemStatus
 import dev.ishubhamsingh.shelfly.ui.components.CategoryAvatar
+import dev.ishubhamsingh.shelfly.ui.components.StatusBadge
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -123,7 +127,7 @@ fun ItemFormScreen(
                 actions = {
                     if (state.isEditMode) {
                         IconButton(onClick = {}) {
-                            Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.detail_action_delete))
+                            Icon(Icons.Outlined.Delete, contentDescription = stringResource(R.string.detail_action_delete))
                         }
                     }
                 },
@@ -165,111 +169,121 @@ fun ItemFormScreen(
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(24.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
             // ── Live preview ──────────────────────────────────────────────────
             FormPreview(state = state)
 
             // ── Name ──────────────────────────────────────────────────────────
-            SectionLabel(stringResource(R.string.form_section_what))
-            OutlinedTextField(
-                value         = state.name,
-                onValueChange = viewModel::setName,
-                label         = { Text(stringResource(R.string.form_name_label)) },
-                placeholder   = { Text(stringResource(R.string.form_name_hint)) },
-                singleLine    = true,
-                modifier      = Modifier.fillMaxWidth(),
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                SectionLabel(stringResource(R.string.form_section_what))
+                OutlinedTextField(
+                    value         = state.name,
+                    onValueChange = viewModel::setName,
+                    label         = { Text(stringResource(R.string.form_name_label)) },
+                    placeholder   = { Text(stringResource(R.string.form_name_hint)) },
+                    singleLine    = true,
+                    modifier      = Modifier.fillMaxWidth(),
+                )
+            }
 
             // ── Category tiles ────────────────────────────────────────────────
-            SectionLabel(stringResource(R.string.form_section_category))
-            Row(
-                modifier              = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Category.entries.forEach { cat ->
-                    CategoryTile(
-                        category = cat,
-                        selected = state.category == cat,
-                        onClick  = { viewModel.setCategory(cat) },
-                        modifier = Modifier.weight(1f),
-                    )
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                SectionLabel(stringResource(R.string.form_section_category))
+                Row(
+                    modifier              = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Category.entries.forEach { cat ->
+                        CategoryTile(
+                            category = cat,
+                            selected = state.category == cat,
+                            onClick  = { viewModel.setCategory(cat) },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
                 }
             }
 
             // ── Expiry date ────────────────────────────────────────────────────
-            SectionLabel(stringResource(R.string.form_section_expires))
-            Surface(
-                onClick  = { showDatePicker = true },
-                shape    = MaterialTheme.shapes.small,
-                color    = MaterialTheme.colorScheme.surfaceContainerLow,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.outline,
-                        shape = MaterialTheme.shapes.small,
-                    ),
-            ) {
-                Row(
-                    modifier             = Modifier.padding(16.dp),
-                    verticalAlignment    = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                SectionLabel(stringResource(R.string.form_section_expires))
+                Surface(
+                    onClick  = { showDatePicker = true },
+                    shape    = MaterialTheme.shapes.small,
+                    color    = MaterialTheme.colorScheme.surfaceContainerLow,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.outline,
+                            shape = MaterialTheme.shapes.small,
+                        ),
                 ) {
-                    Icon(
-                        imageVector        = Icons.Filled.CalendarMonth,
-                        contentDescription = null,
-                        tint               = MaterialTheme.colorScheme.primary,
-                    )
-                    Text(
-                        text  = state.expiryDate
-                            ?.format(DateTimeFormatter.ofPattern("EEEE, d MMM yyyy"))
-                            ?: stringResource(R.string.form_date_hint),
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = if (state.expiryDate != null)
-                            MaterialTheme.colorScheme.onSurface
-                        else
-                            MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    Row(
+                        modifier              = Modifier.padding(16.dp),
+                        verticalAlignment     = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Icon(
+                            imageVector        = Icons.Filled.CalendarMonth,
+                            contentDescription = null,
+                            tint               = MaterialTheme.colorScheme.primary,
+                        )
+                        Text(
+                            text  = state.expiryDate
+                                ?.format(DateTimeFormatter.ofPattern("EEEE, d MMM yyyy"))
+                                ?: stringResource(R.string.form_date_hint),
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = if (state.expiryDate != null)
+                                MaterialTheme.colorScheme.onSurface
+                            else
+                                MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
 
             // ── Quantity ───────────────────────────────────────────────────────
-            SectionLabel(stringResource(R.string.form_section_quantity))
-            OutlinedTextField(
-                value         = state.qty,
-                onValueChange = viewModel::setQty,
-                label         = { Text(stringResource(R.string.form_qty_label)) },
-                singleLine    = true,
-                modifier      = Modifier.fillMaxWidth(),
-            )
-            val units = listOf("g", "kg", "ml", "L", "tablets", "count")
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                units.forEach { u ->
-                    FilterChip(
-                        selected = state.unit == u,
-                        onClick  = { viewModel.setUnit(if (state.unit == u) null else u) },
-                        label    = { Text(u) },
-                    )
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                SectionLabel(stringResource(R.string.form_section_quantity))
+                OutlinedTextField(
+                    value         = state.qty,
+                    onValueChange = viewModel::setQty,
+                    label         = { Text(stringResource(R.string.form_qty_label)) },
+                    singleLine    = true,
+                    modifier      = Modifier.fillMaxWidth(),
+                )
+                val units = listOf("g", "kg", "ml", "L", "tablets", "count")
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    units.forEach { u ->
+                        FilterChip(
+                            selected = state.unit == u,
+                            onClick  = { viewModel.setUnit(if (state.unit == u) null else u) },
+                            label    = { Text(u) },
+                        )
+                    }
                 }
             }
 
             // ── Notes ──────────────────────────────────────────────────────────
-            SectionLabel(stringResource(R.string.form_section_notes))
-            OutlinedTextField(
-                value         = state.notes,
-                onValueChange = viewModel::setNotes,
-                placeholder   = { Text(stringResource(R.string.form_notes_hint)) },
-                maxLines      = 4,
-                minLines      = 3,
-                modifier      = Modifier.fillMaxWidth(),
-            )
-            Text(
-                text     = stringResource(R.string.form_notes_count, state.notes.length),
-                style    = MaterialTheme.typography.labelSmall,
-                color    = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.align(Alignment.End),
-            )
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                SectionLabel(stringResource(R.string.form_section_notes))
+                OutlinedTextField(
+                    value         = state.notes,
+                    onValueChange = viewModel::setNotes,
+                    placeholder   = { Text(stringResource(R.string.form_notes_hint)) },
+                    maxLines      = 4,
+                    minLines      = 3,
+                    modifier      = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    text     = stringResource(R.string.form_notes_count, state.notes.length),
+                    style    = MaterialTheme.typography.labelSmall,
+                    color    = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.align(Alignment.End),
+                )
+            }
             Spacer(modifier = Modifier.height(8.dp))
         }
     }
@@ -278,6 +292,37 @@ fun ItemFormScreen(
 @Composable
 private fun FormPreview(state: FormUiState) {
     val isEmpty = state.name.isBlank()
+
+    // Compute badge only when we have an expiry date and a name
+    val daysLeft = state.expiryDate?.let {
+        ChronoUnit.DAYS.between(LocalDate.now(), it).toInt()
+    }
+    val badgeStatus = when {
+        daysLeft == null || isEmpty -> null
+        daysLeft < 0  -> ItemStatus.EXPIRED
+        daysLeft < 7  -> ItemStatus.EXPIRING_SOON
+        else          -> ItemStatus.GOOD
+    }
+    val badgeLabel = when {
+        daysLeft == null || isEmpty -> null
+        daysLeft < 0  -> "${-daysLeft}d ago"
+        daysLeft < 7  -> "${daysLeft}d left"
+        daysLeft < 60 -> "${daysLeft / 7}wk left"
+        else          -> "${daysLeft / 30}mo left"
+    }
+
+    // Formatted quantity for preview line
+    val previewQty = run {
+        val q = state.qty.toDoubleOrNull()
+        buildString {
+            if (q != null) append(if (q == q.toLong().toDouble()) q.toLong() else q)
+            if (!state.unit.isNullOrBlank()) {
+                if (isNotEmpty()) append(" ")
+                append(state.unit)
+            }
+        }.takeIf { it.isNotBlank() }
+    }
+
     Surface(
         shape    = MaterialTheme.shapes.medium,
         color    = MaterialTheme.colorScheme.surfaceContainerLow,
@@ -319,19 +364,27 @@ private fun FormPreview(state: FormUiState) {
                     )
                 } else {
                     Text(
+                        text  = stringResource(R.string.form_preview_label).uppercase(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
                         text     = state.name,
                         style    = MaterialTheme.typography.titleMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    Text(
-                        text  = state.expiryDate
-                            ?.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
-                            ?: stringResource(R.string.form_preview_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    if (previewQty != null) {
+                        Text(
+                            text  = previewQty,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
+            }
+            if (badgeStatus != null && badgeLabel != null) {
+                StatusBadge(status = badgeStatus, label = badgeLabel)
             }
         }
     }

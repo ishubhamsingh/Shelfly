@@ -322,10 +322,10 @@ private fun ItemCard(
 @Composable
 private fun EmptyState(modifier: Modifier = Modifier) {
     Column(
-        modifier             = modifier.padding(32.dp),
-        horizontalAlignment  = Alignment.CenterHorizontally,
-        verticalArrangement  = Arrangement.Center,
+        modifier            = modifier.padding(horizontal = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        Spacer(modifier = Modifier.weight(1f))
         ShelfIllustration(modifier = Modifier.size(160.dp))
         Spacer(modifier = Modifier.height(28.dp))
         Text(
@@ -342,6 +342,7 @@ private fun EmptyState(modifier: Modifier = Modifier) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        Spacer(modifier = Modifier.weight(2f))
     }
 }
 
