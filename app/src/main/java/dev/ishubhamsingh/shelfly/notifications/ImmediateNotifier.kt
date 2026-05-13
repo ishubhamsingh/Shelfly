@@ -23,4 +23,15 @@ class ImmediateNotifier @Inject constructor(
         context.getSystemService(NotificationManager::class.java)
             .notify(item.id.hashCode(), notification)
     }
+
+    fun sendTestNotification() {
+        context.ensureNotificationChannel()
+        val notification = context.buildTestNotification()
+        context.getSystemService(NotificationManager::class.java)
+            .notify(NOTIF_TEST_ID, notification)
+    }
+
+    companion object {
+        private const val NOTIF_TEST_ID = 1002
+    }
 }

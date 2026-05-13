@@ -1,5 +1,8 @@
 package dev.ishubhamsingh.shelfly.ui.settings
 
+import android.app.NotificationManager
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -12,10 +15,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -28,15 +33,22 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ishubhamsingh.shelfly.R
 
@@ -47,6 +59,20 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
+    val context  = LocalContext.current
+
+    // Re-check on every resume so the status updates if the user changes it
+    // in system settings and then comes back.
+    var notificationsEnabled by remember {
+        mutableStateOf(
+            context.getSystemService(NotificationManager::class.java).areNotificationsEnabled()
+        )
+    }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        notificationsEnabled = context
+            .getSystemService(NotificationManager::class.java)
+            .areNotificationsEnabled()
+    }
 
     Scaffold(
         topBar = {
@@ -123,6 +149,18 @@ fun SettingsScreen(
                     subtitle = stringResource(R.string.settings_quiet_hours_body),
                     checked  = settings.quietHours,
                     onCheckedChange = viewModel::setQuietHours,
+                )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp))
+                NotificationStatusRow(
+                    enabled  = notificationsEnabled,
+                    onOpenSettings = {
+                        context.startActivity(
+                            Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+                            }
+                        )
+                    },
+                    onSendTest = viewModel::sendTestNotification,
                 )
                 Spacer(modifier = Modifier.height(4.dp))
             }
@@ -226,6 +264,54 @@ private fun SettingsRow(
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun NotificationStatusRow(
+    enabled: Boolean,
+    onOpenSettings: () -> Unit,
+    onSendTest: () -> Unit,
+) {
+    Row(
+        modifier          = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector        = if (enabled) Icons.Filled.CheckCircle else Icons.Filled.NotificationsOff,
+            contentDescription = null,
+            tint               = if (enabled) MaterialTheme.colorScheme.primary
+                                 else MaterialTheme.colorScheme.error,
+            modifier           = Modifier.size(22.dp),
+        )
+        Spacer(modifier = Modifier.size(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text  = stringResource(
+                    if (enabled) R.string.settings_notif_status_on
+                    else         R.string.settings_notif_status_off
+                ),
+                style = MaterialTheme.typography.bodyLarge,
+            )
+            if (!enabled) {
+                Text(
+                    text  = stringResource(R.string.settings_notif_status_off_sub),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        if (enabled) {
+            TextButton(onClick = onSendTest) {
+                Text(stringResource(R.string.settings_notif_send_test))
+            }
+        } else {
+            TextButton(onClick = onOpenSettings) {
+                Text(stringResource(R.string.settings_notif_open_settings))
             }
         }
     }

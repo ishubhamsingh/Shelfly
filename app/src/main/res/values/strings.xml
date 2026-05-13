@@ -121,6 +121,13 @@
     <string name="notif_channel_desc">Alerts when items on your shelf are about to expire</string>
     <string name="notif_title_singular">1 item expiring soon</string>
     <string name="notif_title_plural">%d items expiring soon</string>
+    <string name="notif_test_title">Test notification</string>
+    <string name="notif_test_body">Notifications from Shelfly are working.</string>
+    <string name="settings_notif_status_on">Notifications are on</string>
+    <string name="settings_notif_status_off">Notifications are off</string>
+    <string name="settings_notif_status_off_sub">Tap Open settings to enable</string>
+    <string name="settings_notif_open_settings">Open settings</string>
+    <string name="settings_notif_send_test">Send test</string>
 
     <!-- Filter & Sort sheet -->
     <string name="filter_sort_title">Filter &amp; Sort</string>

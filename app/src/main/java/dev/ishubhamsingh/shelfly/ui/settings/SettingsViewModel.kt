@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.ishubhamsingh.shelfly.data.repo.SettingsRepository
 import dev.ishubhamsingh.shelfly.domain.model.Settings
+import dev.ishubhamsingh.shelfly.notifications.ImmediateNotifier
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -14,6 +15,7 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val settingsRepo: SettingsRepository,
+    private val notifier: ImmediateNotifier,
 ) : ViewModel() {
 
     val settings: StateFlow<Settings> = settingsRepo.settings.stateIn(
@@ -32,5 +34,9 @@ class SettingsViewModel @Inject constructor(
 
     fun setQuietHours(enabled: Boolean) {
         viewModelScope.launch { settingsRepo.setQuietHours(enabled) }
+    }
+
+    fun sendTestNotification() {
+        notifier.sendTestNotification()
     }
 }

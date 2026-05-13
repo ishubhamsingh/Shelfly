@@ -26,6 +26,23 @@ fun Context.ensureNotificationChannel() {
     mgr.createNotificationChannel(channel)
 }
 
+fun Context.buildTestNotification(): android.app.Notification {
+    val launchIntent = Intent(this, MainActivity::class.java).apply {
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+    }
+    val pendingIntent = PendingIntent.getActivity(
+        this, 0, launchIntent,
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
+    return NotificationCompat.Builder(this, CHANNEL_ID)
+        .setSmallIcon(R.drawable.ic_launcher_foreground)
+        .setContentTitle(getString(R.string.notif_test_title))
+        .setContentText(getString(R.string.notif_test_body))
+        .setContentIntent(pendingIntent)
+        .setAutoCancel(true)
+        .build()
+}
+
 fun Context.buildExpiryNotification(items: List<Item>): android.app.Notification {
     val launchIntent = Intent(this, MainActivity::class.java).apply {
         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
