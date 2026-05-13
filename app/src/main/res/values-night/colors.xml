@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Notification chip colors (dark) — bg/fg are flipped from light -->
+    <color name="chip_food_bg">#5E4200</color>
+    <color name="chip_food_fg">#FFDEA8</color>
+    <color name="chip_medicine_bg">#1B5E20</color>
+    <color name="chip_medicine_fg">#C8E6C9</color>
+    <color name="chip_cosmetic_bg">#4A148C</color>
+    <color name="chip_cosmetic_fg">#F8BBD0</color>
+    <color name="chip_other_bg">#424242</color>
+    <color name="chip_other_fg">#E0E0E0</color>
+</resources>
