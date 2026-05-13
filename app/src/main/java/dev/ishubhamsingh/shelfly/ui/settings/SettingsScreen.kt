@@ -5,6 +5,7 @@ import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -52,6 +53,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.colorResource
@@ -329,14 +331,21 @@ private fun NotificationPreviewCard(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier          = Modifier.fillMaxWidth(),
             ) {
-                // Use the real launcher icon, same as what appears in the notification shade
-                androidx.compose.foundation.Image(
-                    painter            = painterResource(R.mipmap.ic_launcher),
-                    contentDescription = null,
-                    modifier           = Modifier
+                // Replicate the launcher icon badge (adaptive icons can't use painterResource)
+                Box(
+                    modifier = Modifier
                         .size(16.dp)
-                        .clip(RoundedCornerShape(3.dp)),
-                )
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(Color(0xFFC0F0A1)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        painter            = painterResource(R.drawable.ic_launcher_foreground),
+                        contentDescription = null,
+                        tint               = Color.Unspecified,
+                        modifier           = Modifier.size(16.dp),
+                    )
+                }
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text  = stringResource(R.string.app_name),

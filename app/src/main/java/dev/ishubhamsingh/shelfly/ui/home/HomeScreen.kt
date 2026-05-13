@@ -19,9 +19,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.outlined.FilterList
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -203,15 +202,9 @@ private fun HomeTopBar(
             }
         },
         actions = {
-            IconButton(onClick = {}) {
-                Icon(
-                    imageVector        = Icons.Filled.Notifications,
-                    contentDescription = stringResource(R.string.cd_notifications),
-                )
-            }
             IconButton(onClick = onFilterClick) {
                 Icon(
-                    imageVector        = Icons.Filled.Tune,
+                    imageVector        = Icons.Outlined.FilterList,
                     contentDescription = stringResource(R.string.cd_filter_sort),
                     tint = if (categoryFilter != null || sort != HomeSort.EXPIRY_DATE)
                         MaterialTheme.colorScheme.primary
@@ -221,7 +214,7 @@ private fun HomeTopBar(
             }
             IconButton(onClick = onSettingsClick) {
                 Icon(
-                    imageVector        = Icons.Filled.Settings,
+                    imageVector        = Icons.Outlined.Settings,
                     contentDescription = stringResource(R.string.cd_settings),
                 )
             }
