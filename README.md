@@ -1,8 +1,4 @@
-<p align="center">
-  <img src="app/src/main/res/drawable/ic_launcher_foreground.xml" width="96" height="96" alt="Shelfly icon" />
-</p>
-
-<h1 align="center">Shelfly</h1>
+<h1 align="center">🌿 Shelfly</h1>
 <p align="center">Track expiry dates for food, medicine, and cosmetics — powered by Android AppFunctions</p>
 
 <p align="center">
