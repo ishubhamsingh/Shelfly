@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Launcher icon background: primaryContainer from the Shelfly light scheme -->
+    <color name="ic_launcher_background">#C0F0A1</color>
+</resources>

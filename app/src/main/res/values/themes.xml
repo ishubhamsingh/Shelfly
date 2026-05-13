@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Base application theme — no action bar; Compose handles all chrome. -->
+    <style name="Theme.Shelfly" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- Window background matches our surface token so the launch flash
+             is the right color rather than the default white. -->
+        <item name="android:windowBackground">@android:color/white</item>
+    </style>
+</resources>
