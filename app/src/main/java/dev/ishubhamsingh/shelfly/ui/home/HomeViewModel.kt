@@ -43,7 +43,7 @@ class HomeViewModel @Inject constructor(
         filter to settings
     }.flatMapLatest { (filter, settings) ->
         val itemsFlow = when (filter) {
-            HomeFilter.ALL           -> itemRepo.observeAll()
+            HomeFilter.ALL           -> itemRepo.observeNonConsumed()
             HomeFilter.EXPIRING_SOON -> itemRepo.observeExpiringSoon(settings.defaultLeadTimeDays)
             HomeFilter.EXPIRED       -> itemRepo.observeExpired()
             HomeFilter.CONSUMED      -> itemRepo.observeConsumed()

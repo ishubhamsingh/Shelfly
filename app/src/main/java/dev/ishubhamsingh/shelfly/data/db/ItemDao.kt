@@ -15,6 +15,9 @@ interface ItemDao {
     @Query("SELECT * FROM items ORDER BY expiryDate ASC")
     fun observeAll(): Flow<List<Item>>
 
+    @Query("SELECT * FROM items WHERE consumed = 0 ORDER BY expiryDate ASC")
+    fun observeNonConsumed(): Flow<List<Item>>
+
     @Query("SELECT * FROM items WHERE consumed = 0 AND expiryDate >= :todayEpochDay ORDER BY expiryDate ASC")
     fun observeActive(todayEpochDay: Long): Flow<List<Item>>
 

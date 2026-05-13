@@ -7,6 +7,7 @@ import java.time.LocalDate
 
 interface ItemRepository {
     fun observeAll(): Flow<List<Item>>
+    fun observeNonConsumed(): Flow<List<Item>>
     fun observeActive(): Flow<List<Item>>
     fun observeExpired(): Flow<List<Item>>
     fun observeExpiringSoon(withinDays: Int): Flow<List<Item>>

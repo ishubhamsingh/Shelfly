@@ -12,6 +12,7 @@ class ItemRepositoryImpl @Inject constructor(
 ) : ItemRepository {
 
     override fun observeAll(): Flow<List<Item>> = dao.observeAll()
+    override fun observeNonConsumed(): Flow<List<Item>> = dao.observeNonConsumed()
 
     override fun observeActive(): Flow<List<Item>> =
         dao.observeActive(LocalDate.now().toEpochDay())
