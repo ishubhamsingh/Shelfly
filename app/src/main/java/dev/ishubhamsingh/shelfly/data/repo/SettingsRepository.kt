@@ -14,9 +14,11 @@ class SettingsRepository @Inject constructor(
 ) {
     val settings: Flow<Settings> = dataStore.data.map { prefs ->
         Settings(
-            defaultLeadTimeDays = prefs[DataStoreKeys.LEAD_TIME_DAYS] ?: Settings().defaultLeadTimeDays,
-            dynamicColor        = prefs[DataStoreKeys.DYNAMIC_COLOR]  ?: Settings().dynamicColor,
-            quietHours          = prefs[DataStoreKeys.QUIET_HOURS]     ?: Settings().quietHours,
+            defaultLeadTimeDays = prefs[DataStoreKeys.LEAD_TIME_DAYS]   ?: Settings().defaultLeadTimeDays,
+            dynamicColor        = prefs[DataStoreKeys.DYNAMIC_COLOR]    ?: Settings().dynamicColor,
+            quietHours          = prefs[DataStoreKeys.QUIET_HOURS]      ?: Settings().quietHours,
+            notifShowCount      = prefs[DataStoreKeys.NOTIF_SHOW_COUNT] ?: Settings().notifShowCount,
+            notifShowDays       = prefs[DataStoreKeys.NOTIF_SHOW_DAYS]  ?: Settings().notifShowDays,
         )
     }
 
@@ -38,5 +40,13 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setOnboardingDone() {
         dataStore.edit { prefs -> prefs[DataStoreKeys.ONBOARDING_DONE] = true }
+    }
+
+    suspend fun setNotifShowCount(enabled: Boolean) {
+        dataStore.edit { prefs -> prefs[DataStoreKeys.NOTIF_SHOW_COUNT] = enabled }
+    }
+
+    suspend fun setNotifShowDays(enabled: Boolean) {
+        dataStore.edit { prefs -> prefs[DataStoreKeys.NOTIF_SHOW_DAYS] = enabled }
     }
 }

@@ -4,4 +4,6 @@ data class Settings(
     val defaultLeadTimeDays: Int = 3,
     val dynamicColor: Boolean = false,
     val quietHours: Boolean = true,
+    val notifShowCount: Boolean = true,
+    val notifShowDays: Boolean = true,
 )

@@ -121,13 +121,27 @@
     <string name="notif_channel_desc">Alerts when items on your shelf are about to expire</string>
     <string name="notif_title_singular">1 item expiring soon</string>
     <string name="notif_title_plural">%d items expiring soon</string>
-    <string name="notif_test_title">Test notification</string>
-    <string name="notif_test_body">Notifications from Shelfly are working.</string>
+    <string name="notif_title_no_count">Items expiring soon</string>
+    <string name="notif_body_today">today</string>
+    <string name="notif_body_tomorrow">tomorrow</string>
+    <string name="notif_body_in_days">in %d days</string>
+    <string name="notif_preview_item1">Whole milk</string>
+    <string name="notif_preview_item2">Eggs</string>
+    <!-- Settings — notification card -->
     <string name="settings_notif_status_on">Notifications are on</string>
     <string name="settings_notif_status_off">Notifications are off</string>
     <string name="settings_notif_status_off_sub">Tap Open settings to enable</string>
     <string name="settings_notif_open_settings">Open settings</string>
     <string name="settings_notif_send_test">Send test</string>
+    <string name="settings_worker_on">Daily check is scheduled</string>
+    <string name="settings_worker_off">Daily check not running</string>
+    <string name="settings_worker_off_sub">Tap Fix to reschedule</string>
+    <string name="settings_worker_fix">Fix</string>
+    <string name="settings_notif_preview_label">Notification preview</string>
+    <string name="settings_notif_show_count_title">Show item count in title</string>
+    <string name="settings_notif_show_count_body">e.g. "2 items expiring soon"</string>
+    <string name="settings_notif_show_days_title">Show days remaining</string>
+    <string name="settings_notif_show_days_body">e.g. "Milk (tomorrow)"</string>
 
     <!-- Filter & Sort sheet -->
     <string name="filter_sort_title">Filter &amp; Sort</string>
