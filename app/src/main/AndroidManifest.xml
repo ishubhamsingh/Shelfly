@@ -45,7 +45,7 @@
             Permission BIND_APP_FUNCTION_SERVICE restricts binding to the system only.
         -->
         <service
-            android:name="androidx.appfunctions.AppFunctionService"
+            android:name="androidx.appfunctions.service.PlatformAppFunctionService"
             android:exported="true"
             android:permission="android.permission.BIND_APP_FUNCTION_SERVICE">
             <intent-filter>

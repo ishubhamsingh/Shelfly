@@ -17,18 +17,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.EventAvailable
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Scale
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.StickyNote2
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -84,7 +81,6 @@ fun ItemDetailScreen(
     }
 
     var showDeleteDialog by remember { mutableStateOf(false) }
-    var showOverflow by remember { mutableStateOf(false) }
 
     if (showDeleteDialog) {
         AlertDialog(
@@ -115,20 +111,11 @@ fun ItemDetailScreen(
                     }
                 },
                 actions = {
-                    Box {
-                        IconButton(onClick = { showOverflow = true }) {
-                            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.cd_more_options))
-                        }
-                        DropdownMenu(
-                            expanded         = showOverflow,
-                            onDismissRequest = { showOverflow = false },
-                        ) {
-                            DropdownMenuItem(
-                                text    = { Text(stringResource(R.string.detail_action_delete)) },
-                                onClick = { showDeleteDialog = true; showOverflow = false },
-                                leadingIcon = { Icon(Icons.Filled.Delete, contentDescription = null) },
-                            )
-                        }
+                    IconButton(onClick = { showDeleteDialog = true }) {
+                        Icon(
+                            imageVector        = Icons.Outlined.Delete,
+                            contentDescription = stringResource(R.string.detail_action_delete),
+                        )
                     }
                 },
             )
