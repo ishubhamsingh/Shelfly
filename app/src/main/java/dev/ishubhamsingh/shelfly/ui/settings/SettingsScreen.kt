@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -61,6 +61,8 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ishubhamsingh.shelfly.R
+import dev.ishubhamsingh.shelfly.domain.model.Category
+import dev.ishubhamsingh.shelfly.ui.components.CategoryChip
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -296,57 +298,84 @@ private fun NotificationPreviewCard(
     showCount: Boolean,
     showDays: Boolean,
 ) {
+    val item1    = stringResource(R.string.notif_preview_item1)
+    val item2    = stringResource(R.string.notif_preview_item2)
+    val tomorrow = stringResource(R.string.notif_body_tomorrow)
+    val inDays   = stringResource(R.string.notif_body_in_days, 5)
+
     val title = if (showCount)
         stringResource(R.string.notif_title_plural, 2)
     else
         stringResource(R.string.notif_title_no_count)
 
-    val item1 = stringResource(R.string.notif_preview_item1)
-    val item2 = stringResource(R.string.notif_preview_item2)
-    val tomorrow = stringResource(R.string.notif_body_tomorrow)
-    val inDays = stringResource(R.string.notif_body_in_days, 5)
     val body = if (showDays)
-        "$item1 ($tomorrow), $item2 ($inDays)"
+        "$item1 ($tomorrow), $item2 ($inDays). Tap to review."
     else
-        "$item1, $item2"
+        "$item1, $item2. Tap to review."
 
     Surface(
-        shape    = MaterialTheme.shapes.medium,
+        shape    = MaterialTheme.shapes.large,
         color    = MaterialTheme.colorScheme.surfaceContainerHigh,
         modifier = Modifier.fillMaxWidth(),
+        shadowElevation = 1.dp,
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            // App row
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+
+            // App identifier row
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier          = Modifier.fillMaxWidth(),
+            ) {
+                // App icon — small rounded square in primary color
                 Box(
                     modifier         = Modifier
                         .size(16.dp)
-                        .clip(CircleShape)
+                        .clip(RoundedCornerShape(4.dp))
                         .background(MaterialTheme.colorScheme.primary),
-                )
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector        = Icons.Filled.Notifications,
+                        contentDescription = null,
+                        tint               = MaterialTheme.colorScheme.onPrimary,
+                        modifier           = Modifier.size(10.dp),
+                    )
+                }
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text  = stringResource(R.string.app_name),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                Spacer(modifier = Modifier.weight(1f))
                 Text(
-                    text  = "now",
+                    text  = " · now",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                Spacer(modifier = Modifier.weight(1f))
             }
+
             Spacer(modifier = Modifier.height(6.dp))
+
+            // Title + body
             Text(
                 text  = title,
                 style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
             )
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text  = body,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Item category chips
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                CategoryChip(category = Category.FOOD, label = item1)
+                CategoryChip(category = Category.FOOD, label = item2)
+            }
         }
     }
 }
