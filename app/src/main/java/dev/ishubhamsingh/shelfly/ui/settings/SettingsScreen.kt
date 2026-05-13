@@ -5,7 +5,6 @@ import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -24,18 +23,20 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.Medication
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsOff
+import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -53,16 +54,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ishubhamsingh.shelfly.R
 import dev.ishubhamsingh.shelfly.domain.model.Category
-import dev.ishubhamsingh.shelfly.ui.components.CategoryChip
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -314,33 +317,26 @@ private fun NotificationPreviewCard(
         "$item1, $item2. Tap to review."
 
     Surface(
-        shape    = MaterialTheme.shapes.large,
-        color    = MaterialTheme.colorScheme.surfaceContainerHigh,
-        modifier = Modifier.fillMaxWidth(),
+        shape           = MaterialTheme.shapes.large,
+        color           = MaterialTheme.colorScheme.surfaceContainerHigh,
+        modifier        = Modifier.fillMaxWidth(),
         shadowElevation = 1.dp,
     ) {
         Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
 
-            // App identifier row
+            // App identifier row — matches actual notification header
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier          = Modifier.fillMaxWidth(),
             ) {
-                // App icon — small rounded square in primary color
-                Box(
-                    modifier         = Modifier
+                // Use the real launcher icon, same as what appears in the notification shade
+                androidx.compose.foundation.Image(
+                    painter            = painterResource(R.mipmap.ic_launcher),
+                    contentDescription = null,
+                    modifier           = Modifier
                         .size(16.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(MaterialTheme.colorScheme.primary),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector        = Icons.Filled.Notifications,
-                        contentDescription = null,
-                        tint               = MaterialTheme.colorScheme.onPrimary,
-                        modifier           = Modifier.size(10.dp),
-                    )
-                }
+                        .clip(RoundedCornerShape(3.dp)),
+                )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text  = stringResource(R.string.app_name),
@@ -371,12 +367,61 @@ private fun NotificationPreviewCard(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Item category chips
+            // Item chips — use the same hardcoded amber/category colors as the real notification
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                CategoryChip(category = Category.FOOD, label = item1)
-                CategoryChip(category = Category.FOOD, label = item2)
+                NotifPreviewChip(category = Category.FOOD, label = item1)
+                NotifPreviewChip(category = Category.FOOD, label = item2)
             }
         }
+    }
+}
+
+/**
+ * Chip that uses the same hardcoded color resources as the actual RemoteViews
+ * notification chips, so preview and real notification always match.
+ */
+@Composable
+private fun NotifPreviewChip(category: Category, label: String) {
+    val bgColor = colorResource(
+        when (category) {
+            Category.FOOD     -> R.color.chip_food_bg
+            Category.MEDICINE -> R.color.chip_medicine_bg
+            Category.COSMETIC -> R.color.chip_cosmetic_bg
+            Category.OTHER    -> R.color.chip_other_bg
+        }
+    )
+    val fgColor = colorResource(
+        when (category) {
+            Category.FOOD     -> R.color.chip_food_fg
+            Category.MEDICINE -> R.color.chip_medicine_fg
+            Category.COSMETIC -> R.color.chip_cosmetic_fg
+            Category.OTHER    -> R.color.chip_other_fg
+        }
+    )
+    val icon = when (category) {
+        Category.FOOD     -> Icons.Filled.Restaurant
+        Category.MEDICINE -> Icons.Filled.Medication
+        Category.COSMETIC -> Icons.Filled.Spa
+        Category.OTHER    -> Icons.Filled.Inventory2
+    }
+    Row(
+        modifier          = Modifier
+            .background(color = bgColor, shape = RoundedCornerShape(50))
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector        = icon,
+            contentDescription = null,
+            tint               = fgColor,
+            modifier           = Modifier.size(12.dp),
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text  = label,
+            color = fgColor,
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
+        )
     }
 }
 
