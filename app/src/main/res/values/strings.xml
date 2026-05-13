@@ -2,6 +2,17 @@
 <resources>
     <string name="app_name">Shelfly</string>
 
+    <!-- Onboarding -->
+    <string name="onboarding_welcome_title">Welcome to Shelfly</string>
+    <string name="onboarding_welcome_body">Track expiry dates for everything on your shelf — food, meds, and more.</string>
+    <string name="onboarding_welcome_cta">Get started</string>
+    <string name="onboarding_notif_title">Stay ahead of expiry</string>
+    <string name="onboarding_notif_body">Get a nudge a few days before something expires, so you never waste food or miss a dose.</string>
+    <string name="onboarding_notif_cta">Allow notifications</string>
+    <string name="onboarding_notif_skip">Skip for now</string>
+    <string name="onboarding_notif_preview_title">2 items expiring soon</string>
+    <string name="onboarding_notif_preview_body">Milk, Head &amp; Shoulders</string>
+
     <!-- Home screen -->
     <string name="home_title">Shelfly</string>
     <string name="home_item_count">%d items</string>

@@ -11,9 +11,11 @@ import androidx.navigation.navArgument
 import dev.ishubhamsingh.shelfly.ui.detail.ItemDetailScreen
 import dev.ishubhamsingh.shelfly.ui.form.ItemFormScreen
 import dev.ishubhamsingh.shelfly.ui.home.HomeScreen
+import dev.ishubhamsingh.shelfly.ui.onboarding.OnboardingScreen
 import dev.ishubhamsingh.shelfly.ui.settings.SettingsScreen
 
 sealed class Screen(val route: String) {
+    data object Onboarding : Screen("onboarding")
     data object Home : Screen("home")
     data object Form : Screen("form?itemId={itemId}") {
         fun createRoute(itemId: String? = null) =
@@ -27,14 +29,25 @@ sealed class Screen(val route: String) {
 
 @Composable
 fun ShelflyNavHost(
+    startDestination: String,
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController(),
 ) {
     NavHost(
-        navController = navController,
-        startDestination = Screen.Home.route,
-        modifier = modifier,
+        navController    = navController,
+        startDestination = startDestination,
+        modifier         = modifier,
     ) {
+        composable(Screen.Onboarding.route) {
+            OnboardingScreen(
+                onOnboardingComplete = {
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.Onboarding.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
         composable(Screen.Home.route) {
             HomeScreen(
                 onNavigateToForm   = { navController.navigate(Screen.Form.createRoute()) },

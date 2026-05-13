@@ -20,6 +20,10 @@ class SettingsRepository @Inject constructor(
         )
     }
 
+    val onboardingDone: Flow<Boolean> = dataStore.data.map { prefs ->
+        prefs[DataStoreKeys.ONBOARDING_DONE] ?: false
+    }
+
     suspend fun setLeadTimeDays(days: Int) {
         dataStore.edit { prefs -> prefs[DataStoreKeys.LEAD_TIME_DAYS] = days.coerceIn(1, 14) }
     }
@@ -30,5 +34,9 @@ class SettingsRepository @Inject constructor(
 
     suspend fun setQuietHours(enabled: Boolean) {
         dataStore.edit { prefs -> prefs[DataStoreKeys.QUIET_HOURS] = enabled }
+    }
+
+    suspend fun setOnboardingDone() {
+        dataStore.edit { prefs -> prefs[DataStoreKeys.ONBOARDING_DONE] = true }
     }
 }

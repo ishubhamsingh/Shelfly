@@ -20,9 +20,14 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            val dynamicColor by viewModel.dynamicColor.collectAsStateWithLifecycle()
+            val dynamicColor    by viewModel.dynamicColor.collectAsStateWithLifecycle()
+            val startDestination by viewModel.startDestination.collectAsStateWithLifecycle()
             ShelflyTheme(dynamicColor = dynamicColor) {
-                ShelflyNavHost()
+                // Wait until DataStore has resolved the start route (avoids a flash
+                // to the wrong screen on first launch vs. returning user).
+                startDestination?.let { dest ->
+                    ShelflyNavHost(startDestination = dest)
+                }
             }
         }
     }
