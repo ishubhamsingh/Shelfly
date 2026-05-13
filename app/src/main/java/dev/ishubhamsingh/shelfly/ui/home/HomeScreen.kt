@@ -53,6 +53,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
@@ -330,17 +331,19 @@ private fun ItemCard(
 @Composable
 private fun EmptyState(modifier: Modifier = Modifier) {
     Column(
-        modifier            = modifier.padding(horizontal = 32.dp),
+        modifier            = modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Spacer(modifier = Modifier.weight(1f))
-        ShelfIllustration(modifier = Modifier.size(width = 176.dp, height = 144.dp))
-        Spacer(modifier = Modifier.height(28.dp))
+        Spacer(modifier = Modifier.height(80.dp))
+        ShelfIllustration(modifier = Modifier.size(width = 240.dp, height = 196.dp))
+        Spacer(modifier = Modifier.height(36.dp))
         Text(
             text  = stringResource(R.string.home_empty_title),
-            style = MaterialTheme.typography.headlineSmall,
+            style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 48.dp)
         )
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
         Text(
             text  = buildAnnotatedString {
                 append("Tap ")
@@ -349,8 +352,10 @@ private fun EmptyState(modifier: Modifier = Modifier) {
             },
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 56.dp)
         )
-        Spacer(modifier = Modifier.weight(2f))
+        Spacer(modifier = Modifier.weight(1f))
     }
 }
 
