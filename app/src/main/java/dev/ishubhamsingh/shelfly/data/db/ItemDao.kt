@@ -31,6 +31,9 @@ interface ItemDao {
     fun observeByCategory(category: Category): Flow<List<Item>>
 
     @Query("SELECT * FROM items WHERE id = :id")
+    fun observeById(id: String): Flow<Item?>
+
+    @Query("SELECT * FROM items WHERE id = :id")
     suspend fun getById(id: String): Item?
 
     @Query("SELECT * FROM items WHERE consumed = 0 AND expiryDate BETWEEN :todayEpochDay AND :windowEndEpochDay")

@@ -1,5 +1,6 @@
 package dev.ishubhamsingh.shelfly.ui.detail
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -46,6 +48,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -137,6 +143,7 @@ fun ItemDetailScreen(
                     Row(
                         modifier              = Modifier
                             .fillMaxWidth()
+                            .navigationBarsPadding()
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
@@ -223,9 +230,9 @@ fun ItemDetailScreen(
 
 @Composable
 private fun StatusHero(item: Item, settings: Settings) {
-    val status    = item.statusFor(settings.defaultLeadTimeDays)
+    val status       = item.statusFor(settings.defaultLeadTimeDays)
     val statusColors = LocalShelflyStatusColors.current
-    val (bg, fg)  = when (status) {
+    val (bg, fg)     = when (status) {
         ItemStatus.GOOD          -> statusColors.goodContainer     to statusColors.onGoodContainer
         ItemStatus.EXPIRING_SOON -> statusColors.soonContainer     to statusColors.onSoonContainer
         ItemStatus.EXPIRED       -> statusColors.expiredContainer  to statusColors.onExpiredContainer
@@ -237,10 +244,19 @@ private fun StatusHero(item: Item, settings: Settings) {
         ItemStatus.EXPIRED       -> stringResource(R.string.status_already_expired)
         ItemStatus.CONSUMED      -> stringResource(R.string.status_consumed)
     }
+    val d = item.daysUntilExpiry
     val daysText = when {
-        item.consumed            -> stringResource(R.string.status_consumed)
-        item.daysUntilExpiry < 0 -> "Expired ${-item.daysUntilExpiry} days ago"
-        else                     -> "${item.daysUntilExpiry} days left"
+        item.consumed -> stringResource(R.string.status_consumed)
+        d < 0 -> when {
+            -d < 7  -> "${-d} days ago"
+            -d < 60 -> "${-d / 7} weeks ago"
+            else    -> "${-d / 30} months ago"
+        }
+        else -> when {
+            d < 7  -> "$d days left"
+            d < 60 -> "${d / 7} weeks left"
+            else   -> "${d / 30} months left"
+        }
     }
 
     Surface(
@@ -250,35 +266,54 @@ private fun StatusHero(item: Item, settings: Settings) {
             .padding(horizontal = 16.dp, vertical = 4.dp),
         shape    = MaterialTheme.shapes.extraLarge,
     ) {
-        Column(modifier = Modifier.padding(24.dp)) {
-            Row(
-                verticalAlignment    = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Icon(
-                    imageVector        = Icons.Filled.Schedule,
-                    contentDescription = null,
-                    tint               = fg,
-                    modifier           = Modifier.size(20.dp),
-                )
+        Box {
+            // Decorative concentric arcs in top-right corner
+            Canvas(modifier = Modifier.matchParentSize()) {
+                val cx = size.width
+                val cy = 0f
+                listOf(120.dp, 175.dp, 230.dp).forEach { radius ->
+                    val r = radius.toPx()
+                    drawArc(
+                        color      = fg.copy(alpha = 0.10f),
+                        startAngle = 90f,
+                        sweepAngle = 90f,
+                        useCenter  = false,
+                        topLeft    = Offset(cx - r, cy - r),
+                        size       = Size(r * 2, r * 2),
+                        style      = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round),
+                    )
+                }
+            }
+            Column(modifier = Modifier.padding(24.dp)) {
+                Row(
+                    verticalAlignment     = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(
+                        imageVector        = Icons.Filled.Schedule,
+                        contentDescription = null,
+                        tint               = fg,
+                        modifier           = Modifier.size(20.dp),
+                    )
+                    Text(
+                        text  = statusLabel.uppercase(),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = fg,
+                    )
+                }
+                Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text  = statusLabel.uppercase(),
-                    style = MaterialTheme.typography.labelMedium,
+                    text  = daysText,
+                    style = MaterialTheme.typography.displaySmall,
                     color = fg,
                 )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text  = "Expires ${item.expiryDate.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG))}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = fg.copy(alpha = 0.8f),
+                )
             }
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text  = daysText,
-                style = MaterialTheme.typography.displaySmall,
-                color = fg,
-            )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text  = "Expires ${item.expiryDate.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.LONG))}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = fg.copy(alpha = 0.8f),
-            )
         }
     }
 }

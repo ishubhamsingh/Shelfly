@@ -13,6 +13,7 @@ interface ItemRepository {
     fun observeConsumed(): Flow<List<Item>>
     fun observeByCategory(category: Category): Flow<List<Item>>
 
+    fun observeById(id: String): Flow<Item?>
     suspend fun getById(id: String): Item?
     suspend fun getExpiringSoon(withinDays: Int): List<Item>
     suspend fun getExpired(): List<Item>

@@ -15,12 +15,20 @@ class SettingsRepository @Inject constructor(
     val settings: Flow<Settings> = dataStore.data.map { prefs ->
         Settings(
             defaultLeadTimeDays = prefs[DataStoreKeys.LEAD_TIME_DAYS] ?: Settings().defaultLeadTimeDays,
+            dynamicColor        = prefs[DataStoreKeys.DYNAMIC_COLOR]  ?: Settings().dynamicColor,
+            quietHours          = prefs[DataStoreKeys.QUIET_HOURS]     ?: Settings().quietHours,
         )
     }
 
     suspend fun setLeadTimeDays(days: Int) {
-        dataStore.edit { prefs ->
-            prefs[DataStoreKeys.LEAD_TIME_DAYS] = days.coerceIn(1, 14)
-        }
+        dataStore.edit { prefs -> prefs[DataStoreKeys.LEAD_TIME_DAYS] = days.coerceIn(1, 14) }
+    }
+
+    suspend fun setDynamicColor(enabled: Boolean) {
+        dataStore.edit { prefs -> prefs[DataStoreKeys.DYNAMIC_COLOR] = enabled }
+    }
+
+    suspend fun setQuietHours(enabled: Boolean) {
+        dataStore.edit { prefs -> prefs[DataStoreKeys.QUIET_HOURS] = enabled }
     }
 }

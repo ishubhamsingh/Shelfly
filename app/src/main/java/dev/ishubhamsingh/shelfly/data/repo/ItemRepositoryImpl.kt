@@ -32,6 +32,7 @@ class ItemRepositoryImpl @Inject constructor(
     override fun observeByCategory(category: Category): Flow<List<Item>> =
         dao.observeByCategory(category)
 
+    override fun observeById(id: String): Flow<Item?> = dao.observeById(id)
     override suspend fun getById(id: String): Item? = dao.getById(id)
 
     override suspend fun getExpiringSoon(withinDays: Int): List<Item> {

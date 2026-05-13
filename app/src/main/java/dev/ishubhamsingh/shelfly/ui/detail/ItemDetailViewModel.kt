@@ -37,10 +37,10 @@ class ItemDetailViewModel @Inject constructor(
     private val _isDeleted = MutableStateFlow(false)
 
     val uiState: StateFlow<DetailUiState> = combine(
+        itemRepo.observeById(itemId),
         settingsRepo.settings,
         _isDeleted,
-    ) { settings, isDeleted ->
-        val item = itemRepo.getById(itemId)
+    ) { item, settings, isDeleted ->
         DetailUiState(item = item, settings = settings, isLoading = false, isDeleted = isDeleted)
     }.stateIn(
         scope = viewModelScope,

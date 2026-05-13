@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
@@ -21,6 +22,8 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.Button
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
@@ -46,7 +49,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import java.time.format.FormatStyle
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ishubhamsingh.shelfly.R
@@ -132,6 +137,7 @@ fun ItemFormScreen(
                 Row(
                     modifier              = Modifier
                         .fillMaxWidth()
+                        .navigationBarsPadding()
                         .imePadding()
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -161,6 +167,9 @@ fun ItemFormScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
+            // ── Live preview ──────────────────────────────────────────────────
+            FormPreview(state = state)
+
             // ── Name ──────────────────────────────────────────────────────────
             SectionLabel(stringResource(R.string.form_section_what))
             OutlinedTextField(
@@ -262,6 +271,68 @@ fun ItemFormScreen(
                 modifier = Modifier.align(Alignment.End),
             )
             Spacer(modifier = Modifier.height(8.dp))
+        }
+    }
+}
+
+@Composable
+private fun FormPreview(state: FormUiState) {
+    val isEmpty = state.name.isBlank()
+    Surface(
+        shape    = MaterialTheme.shapes.medium,
+        color    = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier              = Modifier.padding(horizontal = 14.dp, vertical = 14.dp),
+            verticalAlignment     = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            if (state.category != null) {
+                CategoryAvatar(category = state.category, size = 44.dp)
+            } else {
+                Surface(
+                    shape    = MaterialTheme.shapes.small,
+                    color    = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    modifier = Modifier.size(44.dp),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector        = Icons.Filled.Inventory2,
+                            contentDescription = null,
+                            tint               = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier           = Modifier.size(22.dp),
+                        )
+                    }
+                }
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                if (isEmpty) {
+                    Text(
+                        text  = stringResource(R.string.form_preview_new).uppercase(),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        text  = stringResource(R.string.form_preview_hint),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                } else {
+                    Text(
+                        text     = state.name,
+                        style    = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text  = state.expiryDate
+                            ?.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
+                            ?: stringResource(R.string.form_preview_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
         }
     }
 }

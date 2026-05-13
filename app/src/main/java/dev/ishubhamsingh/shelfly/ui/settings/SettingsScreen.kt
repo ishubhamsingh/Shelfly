@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Code
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -25,6 +26,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -115,7 +117,31 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp))
+                SwitchRow(
+                    title    = stringResource(R.string.settings_quiet_hours_title),
+                    subtitle = stringResource(R.string.settings_quiet_hours_body),
+                    checked  = settings.quietHours,
+                    onCheckedChange = viewModel::setQuietHours,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // ── Appearance card ────────────────────────────────────────────────
+            SettingsCard {
+                SectionHeader(
+                    icon  = Icons.Filled.Palette,
+                    label = stringResource(R.string.settings_theme_header),
+                )
+                SwitchRow(
+                    title    = stringResource(R.string.settings_dynamic_color_title),
+                    subtitle = stringResource(R.string.settings_dynamic_color_body),
+                    checked  = settings.dynamicColor,
+                    onCheckedChange = viewModel::setDynamicColor,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -202,5 +228,31 @@ private fun SettingsRow(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun SwitchRow(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier          = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = title, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                text  = subtitle,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Spacer(modifier = Modifier.size(12.dp))
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
 }

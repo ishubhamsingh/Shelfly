@@ -25,4 +25,12 @@ class SettingsViewModel @Inject constructor(
     fun setLeadTimeDays(days: Int) {
         viewModelScope.launch { settingsRepo.setLeadTimeDays(days) }
     }
+
+    fun setDynamicColor(enabled: Boolean) {
+        viewModelScope.launch { settingsRepo.setDynamicColor(enabled) }
+    }
+
+    fun setQuietHours(enabled: Boolean) {
+        viewModelScope.launch { settingsRepo.setQuietHours(enabled) }
+    }
 }

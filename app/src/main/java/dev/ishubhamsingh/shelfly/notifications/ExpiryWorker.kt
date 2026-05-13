@@ -10,6 +10,7 @@ import dagger.assisted.AssistedInject
 import dev.ishubhamsingh.shelfly.data.repo.ItemRepository
 import dev.ishubhamsingh.shelfly.data.repo.SettingsRepository
 import kotlinx.coroutines.flow.first
+import java.util.Calendar
 
 @HiltWorker
 class ExpiryWorker @AssistedInject constructor(
@@ -21,6 +22,10 @@ class ExpiryWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         val settings = settingsRepo.settings.first()
+        if (settings.quietHours) {
+            val hour = Calendar.getInstance().get(Calendar.HOUR_OF_DAY)
+            if (hour >= 22 || hour < 8) return Result.success()
+        }
         val expiring = itemRepo.getExpiringSoon(settings.defaultLeadTimeDays)
         if (expiring.isEmpty()) return Result.success()
 

@@ -93,6 +93,11 @@
     <string name="settings_lead_time_label">%d days before</string>
     <string name="settings_lead_time_min">1 day</string>
     <string name="settings_lead_time_max">14 days</string>
+    <string name="settings_quiet_hours_title">Quiet hours</string>
+    <string name="settings_quiet_hours_body">No alerts between 10 pm – 8 am</string>
+    <string name="settings_theme_header">Appearance</string>
+    <string name="settings_dynamic_color_title">Dynamic color</string>
+    <string name="settings_dynamic_color_body">Match your system wallpaper palette</string>
     <string name="settings_about_header">About</string>
     <string name="settings_version_title">App version</string>
     <string name="settings_source_title">View source</string>
