@@ -35,18 +35,18 @@ fun ShelflyMark(
             strokeLineCap   = StrokeCap.Round,
         ) {
             moveTo(16f, 28f)
-            lineTo(16f, 16f)
+            lineTo(16f, 19f)
         }
         path(fill = SolidColor(color)) {
-            moveTo(16f, 18f)
-            curveTo(11f, 18f, 7f, 14f, 7f, 10f)
-            curveTo(12f, 10f, 16f, 14f, 16f, 18f)
+            moveTo(16f, 21f)
+            curveTo(11f, 21f, 7f, 17f, 7f, 13f)
+            curveTo(12f, 13f, 16f, 17f, 16f, 21f)
             close()
         }
         path(fill = SolidColor(color)) {
-            moveTo(16f, 16f)
-            curveTo(16f, 9f, 20f, 4f, 25f, 4f)
-            curveTo(25f, 11f, 21f, 16f, 16f, 16f)
+            moveTo(16f, 19f)
+            curveTo(16f, 13f, 20f, 10f, 24f, 10f)
+            curveTo(24f, 15f, 20f, 19f, 16f, 19f)
             close()
         }
     }.build()
