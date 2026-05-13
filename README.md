@@ -1,4 +1,8 @@
-<h1 align="center">🌿 Shelfly</h1>
+<p align="center">
+  <img src="assets/icon.png" width="96" height="96" alt="Shelfly icon" />
+</p>
+
+<h1 align="center">Shelfly</h1>
 <p align="center">Track expiry dates for food, medicine, and cosmetics — powered by Android AppFunctions</p>
 
 <p align="center">
@@ -76,7 +80,19 @@ Shelfly registers 9 AppFunctions callable by Gemini or any on-device AI agent:
 
 ## Screenshots
 
-> Coming soon
+<div align="center">
+
+### Light Mode
+| Home | Add / Edit | Detail | Filter | Settings |
+|:---:|:---:|:---:|:---:|:---:|
+| <img src="assets/home_light.png" width="180"> | <img src="assets/add_light.png" width="180"> | <img src="assets/detail_light.png" width="180"> | <img src="assets/filter_light.png" width="180"> | <img src="assets/settings_light.png" width="180"> |
+
+### Dark Mode
+| Home | Add / Edit | Detail | Filter | Settings |
+|:---:|:---:|:---:|:---:|:---:|
+| <img src="assets/home_dark.png" width="180"> | <img src="assets/add_dark.png" width="180"> | <img src="assets/detail_dark.png" width="180"> | <img src="assets/filter_dark.png" width="180"> | <img src="assets/settings_dark.png" width="180"> |
+
+</div>
 
 ---
 
