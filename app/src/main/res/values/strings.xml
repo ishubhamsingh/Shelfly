@@ -111,7 +111,34 @@
     <string name="notif_title_singular">1 item expiring soon</string>
     <string name="notif_title_plural">%d items expiring soon</string>
 
+    <!-- Filter & Sort sheet -->
+    <string name="filter_sort_title">Filter &amp; Sort</string>
+    <string name="filter_section_category">Category</string>
+    <string name="filter_section_sort_by">Sort by</string>
+    <string name="filter_section_order">Order</string>
+    <string name="sort_expiry_date">Expiry date</string>
+    <string name="sort_expiry_date_sub">Most urgent first</string>
+    <string name="sort_category">Category</string>
+    <string name="sort_category_sub">Food → Medicine → Cosmetic → Other</string>
+    <string name="sort_name">Name</string>
+    <string name="sort_name_sub">Alphabetical</string>
+    <string name="sort_date_added">Date added</string>
+    <string name="sort_date_added_sub">When tracked</string>
+    <string name="sort_quantity">Quantity</string>
+    <string name="sort_quantity_sub">By amount remaining</string>
+    <string name="filter_order_ascending">Ascending</string>
+    <string name="filter_order_descending">Descending</string>
+    <string name="filter_reset">Reset</string>
+    <string name="filter_apply">Apply</string>
+    <!-- Short sort labels used in TopBar subtitle -->
+    <string name="sort_short_expiry">expiry</string>
+    <string name="sort_short_category">category</string>
+    <string name="sort_short_name">name</string>
+    <string name="sort_short_date">date</string>
+    <string name="sort_short_quantity">quantity</string>
+
     <!-- Accessibility -->
+    <string name="cd_filter_sort">Filter and sort</string>
     <string name="cd_category_icon">%s category</string>
     <string name="cd_status_badge">Status: %s</string>
     <string name="cd_settings">Settings</string>
