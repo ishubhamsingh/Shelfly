@@ -5,11 +5,14 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.ishubhamsingh.shelfly.data.repo.ItemRepository
+import dev.ishubhamsingh.shelfly.data.repo.SettingsRepository
 import dev.ishubhamsingh.shelfly.domain.model.Category
 import dev.ishubhamsingh.shelfly.domain.model.Item
+import dev.ishubhamsingh.shelfly.notifications.ImmediateNotifier
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -36,6 +39,8 @@ data class FormUiState(
 class ItemFormViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val itemRepo: ItemRepository,
+    private val settingsRepo: SettingsRepository,
+    private val notifier: ImmediateNotifier,
 ) : ViewModel() {
 
     private val itemId: String? = savedStateHandle["itemId"]
@@ -103,6 +108,7 @@ class ItemFormViewModel @Inject constructor(
                     createdAt  = Instant.now(),
                 )
                 itemRepo.insert(item)
+                notifier.notifyIfWithinWindow(item, settingsRepo.settings.first())
             }
             _state.update { it.copy(isSaved = true) }
         }

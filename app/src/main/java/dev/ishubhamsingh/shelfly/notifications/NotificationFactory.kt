@@ -63,10 +63,11 @@ private fun Context.formatSingleExpiryContent(item: Item): Pair<String, String> 
 
 // ── Notification builders ──────────────────────────────────────────────────────
 
-/** Single grouped notification for all expiring items. */
+/** Single grouped notification for all expiring items. Deep-links to Detail for one item, Home for many. */
 fun Context.buildExpiryNotification(items: List<Item>): android.app.Notification {
     val (title, body) = formatExpiryContent(items)
-    return buildNotification(title, body, items.take(3).map { it.name to it.category })
+    val itemId = if (items.size == 1) items.first().id else null
+    return buildNotification(title, body, items.take(3).map { it.name to it.category }, itemId)
 }
 
 /**
@@ -97,8 +98,9 @@ private fun Context.buildNotification(
     title: String,
     body: String,
     chips: List<Pair<String, Category>>,
+    itemId: String? = null,
 ): android.app.Notification {
-    val pendingIntent = launchPendingIntent()
+    val pendingIntent = launchPendingIntent(itemId)
 
     val bigView = buildBigContentView(title, body, chips)
 
@@ -113,12 +115,13 @@ private fun Context.buildNotification(
         .build()
 }
 
-private fun Context.launchPendingIntent(): PendingIntent {
+private fun Context.launchPendingIntent(itemId: String? = null): PendingIntent {
     val intent = Intent(this, MainActivity::class.java).apply {
         flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        if (itemId != null) putExtra("ITEM_ID", itemId)
     }
     return PendingIntent.getActivity(
-        this, 0, intent,
+        this, itemId?.hashCode() ?: 0, intent,
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
     )
 }

@@ -7,6 +7,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dagger.hilt.android.AndroidEntryPoint
+import dev.ishubhamsingh.shelfly.ui.navigation.Screen
 import dev.ishubhamsingh.shelfly.ui.navigation.ShelflyNavHost
 import dev.ishubhamsingh.shelfly.ui.theme.ShelflyTheme
 import androidx.compose.runtime.getValue
@@ -19,15 +20,13 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        val notifItemId = intent.getStringExtra("ITEM_ID")
         setContent {
-            val dynamicColor    by viewModel.dynamicColor.collectAsStateWithLifecycle()
+            val dynamicColor     by viewModel.dynamicColor.collectAsStateWithLifecycle()
             val startDestination by viewModel.startDestination.collectAsStateWithLifecycle()
             ShelflyTheme(dynamicColor = dynamicColor) {
-                // Wait until DataStore has resolved the start route (avoids a flash
-                // to the wrong screen on first launch vs. returning user).
-                startDestination?.let { dest ->
-                    ShelflyNavHost(startDestination = dest)
-                }
+                val dest = notifItemId?.let { Screen.Detail.createRoute(it) } ?: startDestination
+                dest?.let { ShelflyNavHost(startDestination = it) }
             }
         }
     }
