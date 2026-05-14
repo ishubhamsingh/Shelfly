@@ -72,6 +72,7 @@ import dev.ishubhamsingh.shelfly.ui.components.CategoryAvatar
 import dev.ishubhamsingh.shelfly.ui.components.ShelfIllustration
 import dev.ishubhamsingh.shelfly.ui.components.ShelflyMark
 import dev.ishubhamsingh.shelfly.ui.components.StatusBadge
+import dev.ishubhamsingh.shelfly.ui.components.rememberHasAssistant
 import dev.ishubhamsingh.shelfly.ui.components.rememberIsAppFunctionsCapable
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -83,15 +84,16 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    val isCapable = rememberIsAppFunctionsCapable()
+    val isCapable    = rememberIsAppFunctionsCapable()
+    val hasAssistant = rememberHasAssistant()
     var showAddSheet    by remember { mutableStateOf(false) }
     var showFilterSheet by remember { mutableStateOf(false) }
 
     if (showAddSheet) {
         AddOptionsSheet(
-            onDismiss      = { showAddSheet = false },
-            onAskAssistant = { showAddSheet = false },
-            onAddManually  = onNavigateToForm,
+            onDismiss    = { showAddSheet = false },
+            onAddManually = onNavigateToForm,
+            hasAssistant  = hasAssistant,
         )
     }
 

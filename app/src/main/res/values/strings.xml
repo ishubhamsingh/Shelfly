@@ -87,6 +87,7 @@
     <string name="sheet_try_saying">Try saying</string>
     <string name="sheet_add_manually">Add manually</string>
     <string name="sheet_add_manually_subtitle">Type the details in a form</string>
+    <string name="sheet_no_assistant_hint">Set a default assistant in your device settings to use this feature</string>
 
     <!-- Rotating assistant prompts -->
     <string-array name="assistant_prompts">

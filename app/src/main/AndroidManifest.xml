@@ -64,4 +64,10 @@
         </service>
     </application>
 
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.ASSIST" />
+        </intent>
+    </queries>
+
 </manifest>
