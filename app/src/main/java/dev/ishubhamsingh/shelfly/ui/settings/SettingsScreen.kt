@@ -55,7 +55,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -256,6 +258,7 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             // ── About card ─────────────────────────────────────────────────────
+            val uriHandler = LocalUriHandler.current
             SettingsCard {
                 SectionHeader(
                     icon  = Icons.Filled.Info,
@@ -272,12 +275,14 @@ fun SettingsScreen(
                     icon     = Icons.Filled.Code,
                     title    = stringResource(R.string.settings_source_title),
                     subtitle = stringResource(R.string.settings_source_subtitle),
+                    onClick  = { uriHandler.openUri("https://github.com/ishubhamsingh/Shelfly") },
                 )
                 HorizontalDivider(modifier = Modifier.padding(start = 56.dp))
                 SettingsRow(
                     icon     = Icons.Filled.Favorite,
                     title    = stringResource(R.string.settings_feedback_title),
                     subtitle = stringResource(R.string.settings_feedback_subtitle),
+                    onClick  = { uriHandler.openUri("https://github.com/ishubhamsingh/Shelfly/issues/new") },
                 )
             }
 
@@ -496,10 +501,12 @@ private fun SettingsRow(
     icon: ImageVector,
     title: String,
     subtitle: String?,
+    onClick: (() -> Unit)? = null,
 ) {
     Row(
         modifier          = Modifier
             .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

@@ -6,7 +6,7 @@
 <p align="center">Track expiry dates for food, medicine, and cosmetics — powered by Android AppFunctions</p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Android-16%2B-3DDC84?logo=android&logoColor=white" />
+  <img src="https://img.shields.io/badge/Android-13%2B-3DDC84?logo=android&logoColor=white" />
   <img src="https://img.shields.io/badge/Kotlin-2.1.0-7F52FF?logo=kotlin&logoColor=white" />
   <img src="https://img.shields.io/badge/Jetpack%20Compose-2024.12-4285F4?logo=jetpackcompose&logoColor=white" />
   <img src="https://img.shields.io/badge/AppFunctions-alpha-orange" />
@@ -74,7 +74,9 @@ Shelfly registers 9 AppFunctions callable by Gemini or any on-device AI agent:
 | Navigation | Navigation Compose |
 | AppFunctions | `androidx.appfunctions:1.0.0-alpha08` |
 
-**Min / Target SDK:** 36 (Android 16) — required by the AppFunctions API.
+**Min SDK:** 33 (Android 13) · **Target / Compile SDK:** 36 (Android 16)
+
+AppFunctions are runtime-gated to API 36+ — the app runs normally on API 33–35 without the AI agent integration.
 
 ---
 
@@ -104,9 +106,9 @@ cd Shelfly
 ./gradlew assembleDebug
 ```
 
-Requires **Android Studio Meerkat** or newer and a device / emulator running **Android 16 (API 36)**.
+Requires **Android Studio Meerkat** or newer and a device / emulator running **Android 13 (API 33)** or higher.
 
-> AppFunctions only work on API 36 Google APIs images. On earlier emulators the app runs normally but the AI agent integration is unavailable.
+> AppFunctions only work on API 36 Google APIs images. On API 33–35 the app runs normally but the AI agent integration is unavailable.
 
 ---
 
@@ -128,7 +130,7 @@ adb shell cmd app_function execute-app-function \
 ## License
 
 ```
-Copyright 2025 Shubham Singh
+Copyright 2026 Shubham Singh
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.

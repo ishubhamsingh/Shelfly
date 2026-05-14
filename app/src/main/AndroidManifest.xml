@@ -2,8 +2,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Notification permission (required on API 33+; our minSdk is 36) -->
+    <!-- Notification permission (required on API 33+; minSdk is 33 so always needed) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!--
+        AppFunctions library declares minSdk 36 internally.
+        The service is harmlessly registered on API 33-35; the system never binds it there.
+    -->
+    <uses-sdk tools:overrideLibrary="androidx.appfunctions,androidx.appfunctions.service" />
     <!-- WorkManager needs this to schedule periodic work -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
