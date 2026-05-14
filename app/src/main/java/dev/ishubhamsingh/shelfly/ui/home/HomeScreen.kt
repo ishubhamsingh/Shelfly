@@ -74,6 +74,7 @@ import dev.ishubhamsingh.shelfly.ui.components.ShelflyMark
 import dev.ishubhamsingh.shelfly.ui.components.StatusBadge
 import dev.ishubhamsingh.shelfly.ui.components.rememberHasAssistant
 import dev.ishubhamsingh.shelfly.ui.components.rememberIsAppFunctionsCapable
+import dev.ishubhamsingh.shelfly.ui.theme.LocalShelflyStatusColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -452,8 +453,9 @@ private fun ItemCard(
     leadTime: Int,
     onClick : () -> Unit,
 ) {
-    val status = item.statusFor(leadTime)
-    val days   = item.daysUntilExpiry
+    val status       = item.statusFor(leadTime)
+    val days         = item.daysUntilExpiry
+    val statusColors = LocalShelflyStatusColors.current
     val badgeLabel = when (status) {
         ItemStatus.GOOD, ItemStatus.EXPIRING_SOON -> when {
             days < 7  -> "${days}d left"
@@ -531,9 +533,9 @@ private fun ItemCard(
                     modifier          = Modifier.fillMaxSize(),
                     trackColor        = MaterialTheme.colorScheme.surfaceContainerHighest,
                     color             = when (status) {
-                        ItemStatus.GOOD          -> MaterialTheme.colorScheme.primary
-                        ItemStatus.EXPIRING_SOON -> MaterialTheme.colorScheme.tertiary
-                        else                     -> MaterialTheme.colorScheme.error
+                        ItemStatus.GOOD          -> statusColors.goodIndicator
+                        ItemStatus.EXPIRING_SOON -> statusColors.soonIndicator
+                        else                     -> statusColors.expiredIndicator
                     },
                     drawStopIndicator = {},
                     gapSize           = 0.dp,

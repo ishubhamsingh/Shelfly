@@ -167,6 +167,10 @@ data class ShelflyStatusColors(
     val onExpiredContainer: Color,
     val consumedContainer: Color,
     val onConsumedContainer: Color,
+    // Solid-fill colors for progress bar indicators — tuned for thin bar on surface, not text contrast
+    val goodIndicator: Color,
+    val soonIndicator: Color,
+    val expiredIndicator: Color,
 )
 
 val LightStatusColors = ShelflyStatusColors(
@@ -178,6 +182,9 @@ val LightStatusColors = ShelflyStatusColors(
     onExpiredContainer  = Color(0xFF7A0011),
     consumedContainer   = Color(0xFFE4E5DD),
     onConsumedContainer = Color(0xFF5C5F55),
+    goodIndicator       = Color(0xFF2E7D32), // Green 800
+    soonIndicator       = Color(0xFFF57C00), // Orange 700
+    expiredIndicator    = Color(0xFFC62828), // Red 800
 )
 
 val DarkStatusColors = ShelflyStatusColors(
@@ -189,6 +196,9 @@ val DarkStatusColors = ShelflyStatusColors(
     onExpiredContainer  = Color(0xFFFFDAD6),
     consumedContainer   = Color(0xFF33362D),
     onConsumedContainer = Color(0xFFC5C8BA),
+    goodIndicator       = Color(0xFF66BB6A), // Green 400
+    soonIndicator       = Color(0xFFFFA726), // Orange 400
+    expiredIndicator    = Color(0xFFEF5350), // Red 400
 )
 
 val LocalShelflyStatusColors = staticCompositionLocalOf { LightStatusColors }
