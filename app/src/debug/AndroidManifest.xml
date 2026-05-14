@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug-only additions. AGP merges this with the main manifest for debug builds.
+  SpikeActivity is intentionally not exported and not in the main nav graph —
+  launch it with: adb shell am start -n dev.ishubhamsingh.shelfly.debug/.spike.SpikeActivity
+-->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <activity
+            android:name=".spike.SpikeActivity"
+            android:exported="true"
+            android:label="Gemma Spike" />
+    </application>
+</manifest>

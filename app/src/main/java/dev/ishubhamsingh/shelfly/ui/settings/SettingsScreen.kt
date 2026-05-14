@@ -69,6 +69,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ishubhamsingh.shelfly.R
+import dev.ishubhamsingh.shelfly.agent.ModelState
 import dev.ishubhamsingh.shelfly.domain.model.Category
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -79,6 +80,7 @@ fun SettingsScreen(
 ) {
     val settings        by viewModel.settings.collectAsStateWithLifecycle()
     val workerScheduled by viewModel.workerScheduled.collectAsStateWithLifecycle()
+    val modelState      by viewModel.modelState.collectAsStateWithLifecycle()
     val context          = LocalContext.current
 
     // Re-check permission on every resume (user may have changed it in system settings)
@@ -254,6 +256,16 @@ fun SettingsScreen(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // ── AI Scanning card ───────────────────────────────────────────────
+            AiScanningCard(
+                state    = modelState,
+                onDownload = { viewModel.downloadModel(dev.ishubhamsingh.shelfly.agent.GemmaModelManager.MODEL_DOWNLOAD_URL) },
+                onCancel = { viewModel.cancelModelDownload() },
+                onDelete = { viewModel.deleteModel() },
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -549,4 +561,161 @@ private fun SwitchRow(
         Spacer(modifier = Modifier.size(12.dp))
         Switch(checked = checked, onCheckedChange = onCheckedChange)
     }
+}
+
+// ── AI Scanning card ───────────────────────────────────────────────────────────
+
+@Composable
+private fun AiScanningCard(
+    state: ModelState,
+    onDownload: () -> Unit,
+    onCancel: () -> Unit,
+    onDelete: () -> Unit,
+) {
+    val context = LocalContext.current
+    var showDownloadDialog by remember { mutableStateOf(false) }
+
+    if (showDownloadDialog) {
+        DownloadConfirmDialog(
+            context   = context,
+            onConfirm = { showDownloadDialog = false; onDownload() },
+            onDismiss = { showDownloadDialog = false },
+        )
+    }
+
+    SettingsCard {
+        SectionHeader(
+            icon  = Icons.Filled.Info,
+            label = stringResource(R.string.settings_ai_header),
+        )
+        HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
+
+        Row(
+            modifier          = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                when (state) {
+                    is ModelState.NotDownloaded -> {
+                        Text(
+                            stringResource(R.string.settings_ai_status_not_downloaded),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
+                        Text(
+                            stringResource(R.string.settings_ai_status_not_downloaded_sub),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    is ModelState.Downloading -> {
+                        val progressText = if (state.totalBytes > 0) {
+                            stringResource(
+                                R.string.settings_ai_progress_bytes,
+                                state.downloadedBytes / (1024 * 1024),
+                                state.totalBytes / (1024 * 1024),
+                                (state.progress * 100).toInt(),
+                            )
+                        } else {
+                            stringResource(R.string.settings_ai_progress_pct, (state.progress * 100).toInt())
+                        }
+                        Text(progressText, style = MaterialTheme.typography.bodyMedium)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        androidx.compose.material3.LinearProgressIndicator(
+                            progress = { state.progress },
+                            modifier = Modifier.fillMaxWidth(0.85f),
+                        )
+                    }
+                    is ModelState.Ready -> {
+                        val mb = state.sizeBytes / (1024 * 1024)
+                        Text(
+                            stringResource(R.string.settings_ai_status_ready),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                        Text(
+                            stringResource(R.string.settings_ai_size_mb, mb),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    is ModelState.Error -> {
+                        Text(
+                            stringResource(R.string.settings_ai_status_error, state.message),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            when (state) {
+                is ModelState.NotDownloaded, is ModelState.Error ->
+                    TextButton(onClick = { showDownloadDialog = true }) {
+                        Text(stringResource(R.string.settings_ai_action_download))
+                    }
+                is ModelState.Downloading ->
+                    TextButton(onClick = onCancel) {
+                        Text(stringResource(R.string.settings_ai_action_cancel))
+                    }
+                is ModelState.Ready ->
+                    TextButton(onClick = onDelete) {
+                        Text(
+                            stringResource(R.string.settings_ai_action_delete),
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    }
+            }
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+    }
+}
+
+@Composable
+private fun DownloadConfirmDialog(
+    context: android.content.Context,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val isOnWifi = remember {
+        val cm = context.getSystemService(android.net.ConnectivityManager::class.java)
+        val caps = cm.getNetworkCapabilities(cm.activeNetwork)
+        caps?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) == true
+    }
+
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title  = { Text(stringResource(R.string.settings_ai_download_dialog_title)) },
+        text   = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(stringResource(R.string.settings_ai_download_dialog_body))
+                if (!isOnWifi) {
+                    Surface(
+                        color  = MaterialTheme.colorScheme.errorContainer,
+                        shape  = MaterialTheme.shapes.small,
+                    ) {
+                        Text(
+                            stringResource(R.string.settings_ai_download_dialog_wifi_warning),
+                            style    = MaterialTheme.typography.bodySmall,
+                            color    = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm) {
+                Text(stringResource(R.string.settings_ai_download_dialog_confirm))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.settings_ai_download_dialog_cancel))
+            }
+        },
+    )
 }

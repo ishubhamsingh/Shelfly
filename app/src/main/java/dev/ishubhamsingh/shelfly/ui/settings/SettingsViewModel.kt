@@ -9,6 +9,8 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import dev.ishubhamsingh.shelfly.agent.GemmaModelManager
+import dev.ishubhamsingh.shelfly.agent.ModelState
 import dev.ishubhamsingh.shelfly.data.repo.SettingsRepository
 import dev.ishubhamsingh.shelfly.domain.model.Settings
 import dev.ishubhamsingh.shelfly.notifications.ExpiryWorker
@@ -27,6 +29,7 @@ import javax.inject.Inject
 class SettingsViewModel @Inject constructor(
     private val settingsRepo: SettingsRepository,
     private val notifier: ImmediateNotifier,
+    private val modelManager: GemmaModelManager,
     @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
@@ -38,6 +41,12 @@ class SettingsViewModel @Inject constructor(
 
     private val _workerScheduled = MutableStateFlow<Boolean?>(null)
     val workerScheduled: StateFlow<Boolean?> = _workerScheduled.asStateFlow()
+
+    val modelState: StateFlow<ModelState> = modelManager.state.stateIn(
+        scope        = viewModelScope,
+        started      = SharingStarted.WhileSubscribed(5_000),
+        initialValue = ModelState.NotDownloaded,
+    )
 
     init { checkWorkerStatus() }
 
@@ -75,6 +84,12 @@ class SettingsViewModel @Inject constructor(
             }
         }
     }
+
+    // ── Gemma model ────────────────────────────────────────────────────────────
+
+    fun downloadModel(url: String) = modelManager.startDownload(url)
+    fun cancelModelDownload()      = modelManager.cancelDownload()
+    fun deleteModel()              = modelManager.delete()
 
     fun rescheduleWorker() {
         val request = PeriodicWorkRequestBuilder<ExpiryWorker>(1, TimeUnit.DAYS).build()

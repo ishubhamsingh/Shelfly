@@ -177,4 +177,28 @@
     <string name="cd_back">Back</string>
     <string name="cd_add_item">Add item</string>
     <string name="cd_more_options">More options</string>
+
+    <!-- AI Scanning / Gemma model -->
+    <string name="settings_ai_header">AI Scanning (experimental)</string>
+    <string name="settings_ai_status_not_downloaded">Not downloaded</string>
+    <string name="settings_ai_status_not_downloaded_sub">Download the on-device model to use AI scanning without Gemini.</string>
+    <string name="settings_ai_status_downloading">Downloading… %1$d%%</string>
+    <string name="settings_ai_status_ready">Ready</string>
+    <string name="settings_ai_status_error">Error: %1$s</string>
+    <string name="settings_ai_action_download">Download</string>
+    <string name="settings_ai_action_cancel">Cancel</string>
+    <string name="settings_ai_action_delete">Delete</string>
+    <string name="settings_ai_size_mb">%1$d MB</string>
+    <string name="model_download_notif_title">Downloading AI model</string>
+    <string name="model_download_notif_progress">%1$d MB / %2$d MB (%3$d%%)</string>
+    <string name="model_download_notif_progress_pct">%1$d%% complete</string>
+    <string name="model_download_notif_starting">Starting download…</string>
+    <string name="model_download_channel_name">AI Model Download</string>
+    <string name="settings_ai_download_dialog_title">Download AI model (~600 MB)?</string>
+    <string name="settings_ai_download_dialog_body">The on-device AI model is about 600 MB. It will be stored on your device and can be deleted at any time from Settings.</string>
+    <string name="settings_ai_download_dialog_wifi_warning">You\'re not on Wi-Fi. Downloading on mobile data may incur charges.</string>
+    <string name="settings_ai_download_dialog_confirm">Download</string>
+    <string name="settings_ai_download_dialog_cancel">Cancel</string>
+    <string name="settings_ai_progress_bytes">%1$d MB / %2$d MB (%3$d%%)</string>
+    <string name="settings_ai_progress_pct">%1$d%%</string>
 </resources>

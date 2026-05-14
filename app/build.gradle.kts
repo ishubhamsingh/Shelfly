@@ -95,4 +95,10 @@ dependencies {
     implementation(libs.appfunctions)
     implementation(libs.appfunctions.service)
     ksp(libs.appfunctions.compiler)
+
+    // MediaPipe Tasks GenAI — on-device LLM (spike/gemma-agent only; remove if spike fails)
+    debugImplementation(libs.mediapipe.tasks.genai)
+
+    // OkHttp — model download
+    implementation(libs.okhttp)
 }
