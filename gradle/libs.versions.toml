@@ -14,6 +14,7 @@ workManager           = "2.9.1"
 datastore             = "1.1.1"
 appfunctions          = "1.0.0-alpha08"
 mediapipeTasksGenai   = "0.10.27"
+litertlm              = "0.11.0"
 okhttp                = "4.12.0"
 
 [libraries]
@@ -59,8 +60,11 @@ appfunctions          = { group = "androidx.appfunctions", name = "appfunctions"
 appfunctions-service  = { group = "androidx.appfunctions", name = "appfunctions-service",  version.ref = "appfunctions" }
 appfunctions-compiler = { group = "androidx.appfunctions", name = "appfunctions-compiler", version.ref = "appfunctions" }
 
-# MediaPipe Tasks GenAI (on-device LLM inference — spike/gemma-agent only)
+# MediaPipe Tasks GenAI (debug spike only)
 mediapipe-tasks-genai = { group = "com.google.mediapipe", name = "tasks-genai", version.ref = "mediapipeTasksGenai" }
+
+# LiteRT-LM (on-device LLM inference — main agent)
+litertlm-android = { group = "com.google.ai.edge.litertlm", name = "litertlm-android", version.ref = "litertlm" }
 
 # OkHttp (model download)
 okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }

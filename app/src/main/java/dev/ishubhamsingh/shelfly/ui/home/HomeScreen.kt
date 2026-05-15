@@ -61,12 +61,15 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ishubhamsingh.shelfly.R
+import dev.ishubhamsingh.shelfly.agent.ModelState
 import dev.ishubhamsingh.shelfly.domain.model.Category
 import dev.ishubhamsingh.shelfly.domain.model.Item
 import dev.ishubhamsingh.shelfly.domain.model.ItemStatus
 import dev.ishubhamsingh.shelfly.domain.util.daysUntilExpiry
 import dev.ishubhamsingh.shelfly.domain.util.formattedQty
 import dev.ishubhamsingh.shelfly.domain.util.statusFor
+import dev.ishubhamsingh.shelfly.ui.agent.AgentSheet
+import dev.ishubhamsingh.shelfly.ui.agent.AgentViewModel
 import dev.ishubhamsingh.shelfly.ui.components.AddOptionsSheet
 import dev.ishubhamsingh.shelfly.ui.components.CategoryAvatar
 import dev.ishubhamsingh.shelfly.ui.components.ShelfIllustration
@@ -83,18 +86,31 @@ fun HomeScreen(
     onNavigateToDetail: (String) -> Unit,
     onNavigateToSettings: () -> Unit,
     viewModel: HomeViewModel = hiltViewModel(),
+    agentViewModel: AgentViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val modelState by agentViewModel.modelState.collectAsStateWithLifecycle()
     val isCapable    = rememberIsAppFunctionsCapable()
     val hasAssistant = rememberHasAssistant()
+    val modelIsReady = modelState is ModelState.Ready
     var showAddSheet    by remember { mutableStateOf(false) }
     var showFilterSheet by remember { mutableStateOf(false) }
+    var showAgentSheet  by remember { mutableStateOf(false) }
 
     if (showAddSheet) {
         AddOptionsSheet(
             onDismiss    = { showAddSheet = false },
             onAddManually = onNavigateToForm,
+            modelIsReady  = modelIsReady,
             hasAssistant  = hasAssistant,
+            onAskAgent    = { showAgentSheet = true },
+        )
+    }
+
+    if (showAgentSheet) {
+        AgentSheet(
+            onDismiss  = { showAgentSheet = false },
+            viewModel  = agentViewModel,
         )
     }
 

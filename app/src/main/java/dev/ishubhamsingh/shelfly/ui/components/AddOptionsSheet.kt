@@ -45,17 +45,26 @@ import androidx.compose.ui.unit.dp
 import dev.ishubhamsingh.shelfly.R
 import kotlinx.coroutines.delay
 
+// modelIsReady   hasAssistant  → result
+//  true           *            → in-app AgentSheet  (onAskAgent)
+//  false          true         → system ACTION_ASSIST
+//  false          false        → card disabled
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddOptionsSheet(
     onDismiss: () -> Unit,
     onAddManually: () -> Unit,
+    modelIsReady: Boolean,
     hasAssistant: Boolean,
+    onAskAgent: () -> Unit,
 ) {
     val context = LocalContext.current
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val prompts = stringArrayResource(R.array.assistant_prompts)
     var promptIndex by remember { mutableIntStateOf(0) }
+
+    val cardEnabled = modelIsReady || hasAssistant
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -81,13 +90,17 @@ fun AddOptionsSheet(
             Surface(
                 onClick  = {
                     onDismiss()
-                    context.startActivity(
-                        Intent(Intent.ACTION_ASSIST).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    )
+                    if (modelIsReady) {
+                        onAskAgent()
+                    } else {
+                        context.startActivity(
+                            Intent(Intent.ACTION_ASSIST).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        )
+                    }
                 },
-                enabled  = hasAssistant,
+                enabled  = cardEnabled,
                 shape    = MaterialTheme.shapes.extraLarge,
-                color    = if (hasAssistant)
+                color    = if (cardEnabled)
                     MaterialTheme.colorScheme.primaryContainer
                 else
                     MaterialTheme.colorScheme.surfaceContainerHigh,
@@ -95,7 +108,7 @@ fun AddOptionsSheet(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
             ) {
-                val contentColor = if (hasAssistant)
+                val contentColor = if (cardEnabled)
                     MaterialTheme.colorScheme.onPrimaryContainer
                 else
                     MaterialTheme.colorScheme.onSurfaceVariant
@@ -109,7 +122,10 @@ fun AddOptionsSheet(
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text  = stringResource(R.string.sheet_ask_assistant),
+                            text  = if (modelIsReady)
+                                stringResource(R.string.sheet_ask_shelfly)
+                            else
+                                stringResource(R.string.sheet_ask_assistant),
                             style = MaterialTheme.typography.titleMedium,
                             color = contentColor,
                             modifier = Modifier.weight(1f),
@@ -121,9 +137,9 @@ fun AddOptionsSheet(
                         )
                     }
                     Spacer(modifier = Modifier.height(12.dp))
-                    if (hasAssistant) {
+                    if (cardEnabled) {
                         // Rotating prompt area
-                        val contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                        val innerContentColor = MaterialTheme.colorScheme.onPrimaryContainer
                         Surface(
                             color    = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
                             shape    = MaterialTheme.shapes.medium,
@@ -131,9 +147,12 @@ fun AddOptionsSheet(
                         ) {
                             Column(modifier = Modifier.padding(14.dp)) {
                                 Text(
-                                    text  = stringResource(R.string.sheet_try_saying).uppercase(),
+                                    text  = if (modelIsReady)
+                                        stringResource(R.string.sheet_shelfly_subtitle).uppercase()
+                                    else
+                                        stringResource(R.string.sheet_try_saying).uppercase(),
                                     style = MaterialTheme.typography.labelSmall,
-                                    color = contentColor.copy(alpha = 0.7f),
+                                    color = innerContentColor.copy(alpha = 0.7f),
                                 )
                                 Spacer(modifier = Modifier.height(4.dp))
                                 AnimatedContent(
@@ -147,7 +166,7 @@ fun AddOptionsSheet(
                                     Text(
                                         text  = prompts[index],
                                         style = MaterialTheme.typography.bodyMedium,
-                                        color = contentColor,
+                                        color = innerContentColor,
                                     )
                                 }
                             }
@@ -167,7 +186,7 @@ fun AddOptionsSheet(
                                         .height(6.dp)
                                         .width(if (isActive) 18.dp else 6.dp)
                                         .background(
-                                            color  = contentColor
+                                            color  = innerContentColor
                                                 .copy(alpha = if (isActive) 0.9f else 0.3f),
                                             shape  = CircleShape,
                                         ),

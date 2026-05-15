@@ -38,12 +38,12 @@ class GemmaModelManager @Inject constructor(
     val state: StateFlow<ModelState> = _state.asStateFlow()
 
     val defaultModelPath: String
-        get() = context.getExternalFilesDir("models")?.absolutePath + "/gemma.task"
+        get() = context.getExternalFilesDir("models")?.absolutePath + "/gemma.litertlm"
 
     companion object {
         const val MODEL_DOWNLOAD_URL =
-            "https://github.com/ishubhamsingh/Shelfly/releases/download/v0.2-models/gemma3-1B-it-int4.task"
-        const val MODEL_VERSION = "gemma3-1b-it-int4-v1"
+            "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm"
+        const val MODEL_VERSION = "gemma4-e2b-it-litertlm-v1"
     }
 
     init {
@@ -126,6 +126,14 @@ class GemmaModelManager @Inject constructor(
 
     private suspend fun resolveModelFile(): File? {
         val storedPath = dataStore.data.first()[DataStoreKeys.MODEL_FILE_PATH]
+        // If the stored path points to the old .task format, clear it and force re-download
+        if (storedPath != null && !storedPath.endsWith(".litertlm")) {
+            dataStore.edit { prefs ->
+                prefs.remove(DataStoreKeys.MODEL_FILE_PATH)
+                prefs.remove(DataStoreKeys.MODEL_VERSION)
+            }
+            return File(defaultModelPath)
+        }
         return File(storedPath ?: defaultModelPath)
     }
 }

@@ -254,7 +254,7 @@ fun ItemFormScreen(
                     singleLine    = true,
                     modifier      = Modifier.fillMaxWidth(),
                 )
-                val units = listOf("g", "kg", "ml", "L", "tablets", "count")
+                val units = listOf("count", "g", "kg", "mg", "ml", "L", "tablets", "pieces")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     units.forEach { u ->
                         FilterChip(

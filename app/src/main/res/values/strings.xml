@@ -84,10 +84,20 @@
     <!-- Add options sheet -->
     <string name="sheet_how_to_add">How do you want to add this?</string>
     <string name="sheet_ask_assistant">Ask your assistant</string>
+    <string name="sheet_ask_shelfly">Ask Shelfly AI</string>
+    <string name="sheet_shelfly_subtitle">On-device · private</string>
     <string name="sheet_try_saying">Try saying</string>
     <string name="sheet_add_manually">Add manually</string>
     <string name="sheet_add_manually_subtitle">Type the details in a form</string>
     <string name="sheet_no_assistant_hint">Set a default assistant in your device settings to use this feature</string>
+
+    <!-- Agent sheet -->
+    <string name="agent_sheet_title">Ask Shelfly</string>
+    <string name="agent_sheet_hint">Ask me anything about your shelf — I can add items, check what\'s expiring, and more.</string>
+    <string name="agent_sheet_thinking">Thinking…</string>
+    <string name="agent_sheet_placeholder">e.g. Add milk expiring Friday</string>
+    <string name="agent_sheet_send">Send</string>
+    <string name="agent_sheet_error">Something went wrong: %s</string>
 
     <!-- Rotating assistant prompts -->
     <string-array name="assistant_prompts">
@@ -194,8 +204,8 @@
     <string name="model_download_notif_progress_pct">%1$d%% complete</string>
     <string name="model_download_notif_starting">Starting download…</string>
     <string name="model_download_channel_name">AI Model Download</string>
-    <string name="settings_ai_download_dialog_title">Download AI model (~600 MB)?</string>
-    <string name="settings_ai_download_dialog_body">The on-device AI model is about 600 MB. It will be stored on your device and can be deleted at any time from Settings.</string>
+    <string name="settings_ai_download_dialog_title">Download AI model (~2.6 GB)?</string>
+    <string name="settings_ai_download_dialog_body">The on-device AI model is about 2.6 GB. It will be stored on your device and can be deleted at any time from Settings.</string>
     <string name="settings_ai_download_dialog_wifi_warning">You\'re not on Wi-Fi. Downloading on mobile data may incur charges.</string>
     <string name="settings_ai_download_dialog_confirm">Download</string>
     <string name="settings_ai_download_dialog_cancel">Cancel</string>

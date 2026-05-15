@@ -7,6 +7,7 @@ import dev.ishubhamsingh.shelfly.appfunctions.ShelflyAppFunctions
 import dev.ishubhamsingh.shelfly.appfunctions.dto.ItemDto
 import org.json.JSONArray
 import org.json.JSONObject
+import java.time.LocalDate
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -29,13 +30,15 @@ class AgentToolCatalog @Inject constructor(
         return try {
             when (name) {
                 "addItem" -> {
+                    val expiryDate = parseExpiryIn(args.getString("expiryIn")).toString()
+                    val (qty, unit) = parseAmount(args.optStringOrNull("amount"))
                     val result = appFunctions.addItem(
                         appFunctionContext = appFunctionContext,
                         name       = args.getString("name"),
-                        expiryDate = args.getString("expiryDate"),
+                        expiryDate = expiryDate,
                         category   = args.getString("category"),
-                        qty        = args.optDoubleOrNull("qty"),
-                        unit       = args.optStringOrNull("unit"),
+                        qty        = qty,
+                        unit       = unit,
                         notes      = args.optStringOrNull("notes"),
                     )
                     JSONObject().apply {
@@ -45,14 +48,15 @@ class AgentToolCatalog @Inject constructor(
                 }
 
                 "addItemFromMfg" -> {
+                    val (qty, unit) = parseAmount(args.optStringOrNull("amount"))
                     val result = appFunctions.addItemFromMfg(
                         appFunctionContext = appFunctionContext,
                         name              = args.getString("name"),
                         mfgDate           = args.getString("mfgDate"),
                         bestBeforeMonths  = args.getInt("bestBeforeMonths"),
                         category          = args.getString("category"),
-                        qty               = args.optDoubleOrNull("qty"),
-                        unit              = args.optStringOrNull("unit"),
+                        qty               = qty,
+                        unit              = unit,
                         notes             = args.optStringOrNull("notes"),
                     )
                     JSONObject().apply {
@@ -114,10 +118,11 @@ class AgentToolCatalog @Inject constructor(
                 }
 
                 "updateExpiry" -> {
+                    val newExpiry = parseExpiryIn(args.getString("expiryIn")).toString()
                     val item = appFunctions.updateExpiry(
                         appFunctionContext = appFunctionContext,
                         id                = args.getString("id"),
-                        newExpiry         = args.getString("newExpiry"),
+                        newExpiry         = newExpiry,
                     )
                     JSONObject().apply {
                         put("ok", item != null)
@@ -148,6 +153,37 @@ class AgentToolCatalog @Inject constructor(
 
     // ── Marshalling helpers ───────────────────────────────────────────────────
 
+    /**
+     * Parses a duration string produced by the model ("9 days", "3 weeks", "18 months",
+     * "1.5 years") into an absolute LocalDate relative to today.
+     * Also accepts an ISO-8601 date directly if the model produced one.
+     */
+    private fun parseExpiryIn(raw: String): LocalDate {
+        val today = LocalDate.now()
+        val s = raw.trim().lowercase()
+
+        // Already an ISO date — use directly
+        if (s.matches(Regex("""\d{4}-\d{2}-\d{2}"""))) {
+            return try { LocalDate.parse(s) } catch (_: Exception) { today.plusDays(7) }
+        }
+
+        // "tomorrow" shorthand
+        if (s == "tomorrow") return today.plusDays(1)
+
+        // Extract leading number (int or decimal) and time unit word
+        val match = Regex("""(\d+(?:\.\d+)?)\s*(days?|weeks?|months?|years?)""").find(s)
+            ?: return today.plusDays(7) // safe fallback
+
+        val amount = match.groupValues[1].toDouble()
+        return when {
+            match.groupValues[2].startsWith("day")   -> today.plusDays(amount.toLong())
+            match.groupValues[2].startsWith("week")  -> today.plusWeeks(amount.toLong())
+            match.groupValues[2].startsWith("month") -> today.plusMonths(amount.toLong())
+            match.groupValues[2].startsWith("year")  -> today.plusMonths((amount * 12).toLong())
+            else -> today.plusDays(7)
+        }
+    }
+
     private fun ItemDto.toJson() = JSONObject().apply {
         put("id",             id)
         put("name",           name)
@@ -164,11 +200,53 @@ class AgentToolCatalog @Inject constructor(
     private fun List<ItemDto>.toJsonArray(): JSONArray =
         JSONArray().also { arr -> forEach { arr.put(it.toJson()) } }
 
-    private fun JSONObject.optDoubleOrNull(key: String): Double? =
-        if (isNull(key) || !has(key)) null else optDouble(key).takeUnless { it.isNaN() }
-
     private fun JSONObject.optStringOrNull(key: String): String? =
         if (isNull(key) || !has(key)) null else optString(key).takeIf { it.isNotBlank() }
+
+    /**
+     * Parses the model's "amount" string (e.g. "250 ml", "10 tablets", "12 count")
+     * into a (qty, unit) pair. All arithmetic is done here — the model only copies text.
+     */
+    private fun parseAmount(raw: String?): Pair<Double?, String?> {
+        if (raw.isNullOrBlank()) return Pair(null, null)
+        val s = raw.trim().lowercase()
+
+        // "N dozen" → N*12, count
+        Regex("""(\d+(?:\.\d+)?)\s*dozen""").find(s)?.let { m ->
+            return Pair(m.groupValues[1].toDouble() * 12, "count")
+        }
+        // "half dozen" / "half-dozen" → 6, count
+        if (s.contains("half dozen") || s.contains("half-dozen")) {
+            return Pair(6.0, "count")
+        }
+
+        // Standard: number (int or decimal) followed by a unit word
+        val match = Regex("""(\d+(?:\.\d+)?)\s*([a-z]+)""").find(s)
+        if (match != null) {
+            val qty  = match.groupValues[1].toDouble()
+            val unit = normalizeUnit(match.groupValues[2])
+            return Pair(qty, unit)
+        }
+
+        // Bare number with no unit → count
+        Regex("""(\d+(?:\.\d+)?)""").find(s)?.let { m ->
+            return Pair(m.groupValues[1].toDouble(), "count")
+        }
+
+        return Pair(null, null)
+    }
+
+    private fun normalizeUnit(raw: String): String = when (raw.trim().lowercase()) {
+        "tab", "tabs", "tablet"                            -> "tablets"
+        "pc", "pcs", "piece", "unit", "units"             -> "pieces"
+        "l", "litre", "litres", "liter", "liters"         -> "L"
+        "milliliter", "milliliters",
+        "millilitre", "millilitres", "mililiter"          -> "ml"
+        "milligram", "milligrams"                         -> "mg"
+        "gram", "grams"                                   -> "g"
+        "kilogram", "kilograms", "kilo", "kilos"          -> "kg"
+        else                                              -> raw
+    }
 }
 
 // ── Tool definitions JSON ─────────────────────────────────────────────────────
@@ -185,7 +263,7 @@ private val TOOL_DEFINITIONS_JSON = """
         "expiryDate": { "type": "string",  "description": "ISO-8601 date, e.g. '2026-05-17'. Resolve relative dates like 'tomorrow' or 'next Friday' to absolute dates." },
         "category":   { "type": "string",  "enum": ["FOOD","MEDICINE","COSMETIC","OTHER"], "description": "Item category." },
         "qty":        { "type": "number",  "description": "Optional numeric quantity." },
-        "unit":       { "type": "string",  "description": "Optional unit, e.g. 'g', 'ml', 'tablets'." },
+        "unit":       { "type": "string",  "description": "Optional unit, e.g. 'g', 'mg', 'ml', 'tablets'." },
         "notes":      { "type": "string",  "description": "Optional freeform notes." }
       },
       "required": ["name","expiryDate","category"]

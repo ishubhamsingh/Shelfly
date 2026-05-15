@@ -1,0 +1,54 @@
+package dev.ishubhamsingh.shelfly.ui.agent
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dev.ishubhamsingh.shelfly.agent.AgentTurn
+import dev.ishubhamsingh.shelfly.agent.GemmaAgent
+import dev.ishubhamsingh.shelfly.agent.GemmaModelManager
+import dev.ishubhamsingh.shelfly.agent.ModelState
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import javax.inject.Inject
+
+sealed interface AgentUiState {
+    data object Idle    : AgentUiState
+    data object Loading : AgentUiState
+    data class  Result(val reply: String) : AgentUiState
+    data class  Error(val reason: String) : AgentUiState
+}
+
+@HiltViewModel
+class AgentViewModel @Inject constructor(
+    private val agent: GemmaAgent,
+    modelManager: GemmaModelManager,
+) : ViewModel() {
+
+    val modelState: StateFlow<ModelState> = modelManager.state.stateIn(
+        scope        = viewModelScope,
+        started      = SharingStarted.WhileSubscribed(5_000),
+        initialValue = ModelState.NotDownloaded,
+    )
+
+    private val _uiState = MutableStateFlow<AgentUiState>(AgentUiState.Idle)
+    val uiState: StateFlow<AgentUiState> = _uiState.asStateFlow()
+
+    fun run(input: String) {
+        if (input.isBlank()) return
+        _uiState.value = AgentUiState.Loading
+        viewModelScope.launch {
+            val turn = agent.run(input)
+            _uiState.value = when (turn) {
+                is AgentTurn.ToolCall -> AgentUiState.Result(turn.reply)
+                is AgentTurn.Reply    -> AgentUiState.Result(turn.text)
+                is AgentTurn.Failure  -> AgentUiState.Error(turn.reason)
+            }
+        }
+    }
+
+    fun reset() { _uiState.value = AgentUiState.Idle }
+}

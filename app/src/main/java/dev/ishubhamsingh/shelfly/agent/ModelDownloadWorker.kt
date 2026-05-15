@@ -46,7 +46,7 @@ class ModelDownloadWorker @AssistedInject constructor(
 
         val destFile = File(
             appContext.getExternalFilesDir("models"),
-            "gemma.task"
+            "gemma.litertlm"
         )
         destFile.parentFile?.mkdirs()
 
