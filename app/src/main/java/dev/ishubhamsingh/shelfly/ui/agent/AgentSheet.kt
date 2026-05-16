@@ -1,8 +1,10 @@
 package dev.ishubhamsingh.shelfly.ui.agent
 
+import android.Manifest
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
@@ -32,7 +34,11 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
@@ -61,6 +67,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ishubhamsingh.shelfly.R
@@ -68,6 +76,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,8 +92,11 @@ fun AgentSheet(
     val scope = rememberCoroutineScope()
 
     // Pending image: thumbnail for display, bytes for the model
-    var pendingThumbnail by remember { mutableStateOf<Bitmap?>(null) }
+    var pendingThumbnail  by remember { mutableStateOf<Bitmap?>(null) }
     var pendingImageBytes by remember { mutableStateOf<ByteArray?>(null) }
+    var showImageMenu     by remember { mutableStateOf(false) }
+    // URI of the temp file created for camera capture
+    var cameraOutputUri   by remember { mutableStateOf<Uri?>(null) }
 
     fun clearImage() { pendingThumbnail = null; pendingImageBytes = null }
     fun sendAndClear() {
@@ -93,19 +105,17 @@ fun AgentSheet(
         clearImage()
     }
 
-    val imageLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickVisualMedia()
-    ) { uri: Uri? ->
-        if (uri == null) return@rememberLauncherForActivityResult
+    // Shared: decode a URI to a thumbnail Bitmap + JPEG bytes
+    fun processUri(uri: Uri) {
         scope.launch(Dispatchers.IO) {
-            // Pass 1: read bounds only to calculate sample size
+            // Pass 1: bounds only
             val boundsOpts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             context.contentResolver.openInputStream(uri)?.use {
                 BitmapFactory.decodeStream(it, null, boundsOpts)
             }
             val sample = maxOf(boundsOpts.outWidth, boundsOpts.outHeight) / 1024
 
-            // Pass 2: decode with subsampling (keeps memory ~1 MP)
+            // Pass 2: subsample to ~1 MP
             val bitmap = context.contentResolver.openInputStream(uri)?.use {
                 val opts = BitmapFactory.Options().apply { inSampleSize = maxOf(1, sample) }
                 BitmapFactory.decodeStream(it, null, opts)
@@ -117,6 +127,41 @@ fun AgentSheet(
                 pendingThumbnail  = bitmap
                 pendingImageBytes = out.toByteArray()
             }
+        }
+    }
+
+    // Gallery picker
+    val galleryLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? -> if (uri != null) processUri(uri) }
+
+    // Camera — writes to a FileProvider temp file
+    val cameraLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicture()
+    ) { success -> if (success) cameraOutputUri?.let { processUri(it) } }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            val file = File(context.cacheDir, "camera").also { it.mkdirs() }
+                .let { File(it, "label_${System.currentTimeMillis()}.jpg") }
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+            cameraOutputUri = uri
+            cameraLauncher.launch(uri)
+        }
+    }
+
+    fun launchCamera() {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+                == PackageManager.PERMISSION_GRANTED) {
+            val file = File(context.cacheDir, "camera").also { it.mkdirs() }
+                .let { File(it, "label_${System.currentTimeMillis()}.jpg") }
+            val uri = FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+            cameraOutputUri = uri
+            cameraLauncher.launch(uri)
+        } else {
+            cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
 
@@ -275,19 +320,37 @@ fun AgentSheet(
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
                     keyboardActions = KeyboardActions(onSend = { if (canSend) sendAndClear() }),
                 )
-                IconButton(
-                    onClick  = {
-                        imageLauncher.launch(
-                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                Box {
+                    IconButton(
+                        onClick  = { showImageMenu = true },
+                        enabled  = !isLoading,
+                    ) {
+                        Icon(
+                            imageVector        = Icons.Filled.Image,
+                            contentDescription = stringResource(R.string.agent_image_pick),
+                            tint               = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
-                    },
-                    enabled  = !isLoading,
-                ) {
-                    Icon(
-                        imageVector        = Icons.Filled.Image,
-                        contentDescription = stringResource(R.string.agent_image_pick),
-                        tint               = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    }
+                    DropdownMenu(
+                        expanded          = showImageMenu,
+                        onDismissRequest  = { showImageMenu = false },
+                    ) {
+                        DropdownMenuItem(
+                            text         = { Text(stringResource(R.string.agent_image_camera)) },
+                            leadingIcon  = { Icon(Icons.Filled.PhotoCamera, contentDescription = null) },
+                            onClick      = { showImageMenu = false; launchCamera() },
+                        )
+                        DropdownMenuItem(
+                            text         = { Text(stringResource(R.string.agent_image_gallery)) },
+                            leadingIcon  = { Icon(Icons.Filled.PhotoLibrary, contentDescription = null) },
+                            onClick      = {
+                                showImageMenu = false
+                                galleryLauncher.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            },
+                        )
+                    }
                 }
                 IconButton(
                     onClick  = { launchSpeech() },

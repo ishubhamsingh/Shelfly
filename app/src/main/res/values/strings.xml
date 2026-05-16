@@ -103,6 +103,8 @@
     <string name="agent_image_pick">Attach image</string>
     <string name="agent_image_preview">Selected product image</string>
     <string name="agent_image_clear">Remove image</string>
+    <string name="agent_image_camera">Take photo</string>
+    <string name="agent_image_gallery">Choose from gallery</string>
 
     <!-- Rotating assistant prompts -->
     <string-array name="assistant_prompts">

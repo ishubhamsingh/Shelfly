@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Temp files written by the camera before handing off to the agent -->
+    <cache-path name="camera_images" path="camera/" />
+</paths>
