@@ -44,6 +44,10 @@ class GemmaModelManager @Inject constructor(
         const val MODEL_DOWNLOAD_URL =
             "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm"
         const val MODEL_VERSION = "gemma4-e2b-it-litertlm-v1"
+
+        // The complete model is ~2.6 GB. Any file smaller than 2.5 GB is a
+        // partial or corrupt download — treat it as not-downloaded and delete it.
+        private const val MIN_MODEL_SIZE_BYTES = 2_500_000_000L
     }
 
     init {
@@ -54,7 +58,18 @@ class GemmaModelManager @Inject constructor(
     fun refreshState() {
         scope.launch {
             val file = resolveModelFile()
-            _state.value = if (file != null && file.exists() && file.length() > 0) {
+
+            // A non-empty file that is smaller than the minimum expected size is a
+            // partial or corrupt download. Delete it now so it can never be mistaken
+            // for a valid model — loading it would crash the native LiteRT-LM layer.
+            if (file != null && file.exists() && file.length() in 1 until MIN_MODEL_SIZE_BYTES) {
+                file.delete()
+                dataStore.edit { prefs -> prefs.remove(DataStoreKeys.MODEL_FILE_PATH) }
+                _state.value = ModelState.NotDownloaded
+                return@launch
+            }
+
+            _state.value = if (file != null && file.exists() && file.length() >= MIN_MODEL_SIZE_BYTES) {
                 ModelState.Ready(file.absolutePath, file.length())
             } else {
                 ModelState.NotDownloaded

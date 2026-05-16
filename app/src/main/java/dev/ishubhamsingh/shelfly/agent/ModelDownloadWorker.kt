@@ -25,7 +25,7 @@ import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.io.File
-import java.security.MessageDigest
+import java.util.concurrent.TimeUnit
 
 @HiltWorker
 class ModelDownloadWorker @AssistedInject constructor(
@@ -34,6 +34,15 @@ class ModelDownloadWorker @AssistedInject constructor(
     private val dataStore: DataStore<Preferences>,
     private val okHttpClient: OkHttpClient,
 ) : CoroutineWorker(appContext, params) {
+
+    // No read/write timeout — downloading a 2.6 GB file on a slow connection must not time out mid-stream.
+    private val downloadClient: OkHttpClient by lazy {
+        okHttpClient.newBuilder()
+            .connectTimeout(30, TimeUnit.SECONDS)
+            .readTimeout(0, TimeUnit.SECONDS)
+            .writeTimeout(0, TimeUnit.SECONDS)
+            .build()
+    }
 
     override suspend fun getForegroundInfo(): ForegroundInfo = buildForegroundInfo(0f, 0L, 0L)
 
@@ -66,37 +75,53 @@ class ModelDownloadWorker @AssistedInject constructor(
         val requestBuilder = Request.Builder().url(url)
         if (existingBytes > 0) requestBuilder.addHeader("Range", "bytes=$existingBytes-")
 
-        val response = okHttpClient.newCall(requestBuilder.build()).execute()
+        val response = downloadClient.newCall(requestBuilder.build()).execute()
         if (!response.isSuccessful && response.code != 206) {
             throw Exception("HTTP ${response.code}")
         }
 
-        val contentLength = response.header("Content-Range")
+        val totalBytes = response.header("Content-Range")
             ?.substringAfterLast('/')?.toLongOrNull()
             ?: (existingBytes + (response.body?.contentLength() ?: 0L))
 
         val body = response.body ?: throw Exception("Empty response body")
         val append = response.code == 206
 
+        // Fix: open the correct stream BEFORE touching the file — outputStream() truncates immediately.
         body.byteStream().use { input ->
-            dest.outputStream().let { if (append) dest.appendingOutputStream() else it }.use { out ->
-                val buffer = ByteArray(8 * 1024)
+            (if (append) dest.appendingOutputStream() else dest.outputStream()).use { out ->
+                val buffer = ByteArray(512 * 1024) // 512 KB — much faster for large files
                 var downloaded = existingBytes
                 var read: Int
+                var lastNotifMs = 0L  // throttle setForeground() — it's a heavy IPC call
+
                 while (input.read(buffer).also { read = it } != -1) {
                     out.write(buffer, 0, read)
                     downloaded += read
-                    if (contentLength > 0) {
-                        val progress = downloaded.toFloat() / contentLength
+
+                    if (totalBytes > 0) {
+                        val progress = downloaded.toFloat() / totalBytes
+                        // Always update WorkManager state (cheap, in-process)
                         setProgress(workDataOf(
                             KEY_PROGRESS to progress,
                             KEY_DOWNLOADED_BYTES to downloaded,
-                            KEY_TOTAL_BYTES to contentLength,
+                            KEY_TOTAL_BYTES to totalBytes,
                         ))
-                        setForeground(buildForegroundInfo(progress, downloaded, contentLength))
+                        // Throttle notification IPC to once every 2 s — avoids flooding
+                        // ActivityManager/NotificationManager and triggering watchdog reboots.
+                        val now = System.currentTimeMillis()
+                        if (now - lastNotifMs >= 2_000L) {
+                            setForeground(buildForegroundInfo(progress, downloaded, totalBytes))
+                            lastNotifMs = now
+                        }
                     }
                 }
             }
+        }
+
+        // Verify the file is complete — server may close connection early without an error.
+        if (totalBytes > 0 && dest.length() < totalBytes) {
+            throw Exception("Incomplete download: got ${dest.length()} of $totalBytes bytes")
         }
     }
 

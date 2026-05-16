@@ -11,6 +11,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -35,6 +37,17 @@ class AgentViewModel @Inject constructor(
     )
 
     private val _uiState = MutableStateFlow<AgentUiState>(AgentUiState.Idle)
+
+    init {
+        // Pre-load the engine as soon as the model file is ready so the first
+        // inference doesn't pay the cold-start cost while the sheet is visible.
+        viewModelScope.launch {
+            modelState
+                .filter { it is ModelState.Ready }
+                .first()
+            agent.warmUp()
+        }
+    }
     val uiState: StateFlow<AgentUiState> = _uiState.asStateFlow()
 
     fun run(input: String) {

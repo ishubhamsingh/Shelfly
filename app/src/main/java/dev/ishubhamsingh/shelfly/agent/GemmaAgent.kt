@@ -8,10 +8,11 @@ import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
 import com.google.ai.edge.litertlm.SamplerConfig
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.util.concurrent.Executors
 import org.json.JSONObject
 import java.time.LocalDate
 import javax.inject.Inject
@@ -27,13 +28,27 @@ class GemmaAgent @Inject constructor(
     private var engine: Engine? = null
     private var loadedModelPath: String? = null
 
+    // Dedicated single thread for all LiteRT-LM work — never competes with Compose's thread pool
+    private val inferenceDispatcher = Executors
+        .newSingleThreadExecutor { r -> Thread(r, "gemma-inference").apply { isDaemon = true } }
+        .asCoroutineDispatcher()
+
+    /** Pre-loads the engine so the first real inference has no cold-start lag. */
+    suspend fun warmUp() = mutex.withLock {
+        val modelState = modelManager.state.value
+        if (modelState !is ModelState.Ready) return@withLock
+        withContext(inferenceDispatcher) {
+            runCatching { getOrCreateEngine(modelState.modelPath) }
+        }
+    }
+
     suspend fun run(userInput: String): AgentTurn = mutex.withLock {
         val modelState = modelManager.state.value
         if (modelState !is ModelState.Ready) {
             return AgentTurn.Failure("model_not_ready")
         }
 
-        return withContext(Dispatchers.Default) {
+        return withContext(inferenceDispatcher) {
             try {
                 val llm = getOrCreateEngine(modelState.modelPath)
                 val today = LocalDate.now().toString()
