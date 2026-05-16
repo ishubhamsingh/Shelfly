@@ -50,11 +50,11 @@ class AgentViewModel @Inject constructor(
     }
     val uiState: StateFlow<AgentUiState> = _uiState.asStateFlow()
 
-    fun run(input: String, imageBytes: ByteArray? = null) {
-        if (input.isBlank() && imageBytes == null) return
+    fun run(input: String, imagePath: String? = null) {
+        if (input.isBlank() && imagePath == null) return
         _uiState.value = AgentUiState.Loading
         viewModelScope.launch {
-            val turn = agent.run(input, imageBytes)
+            val turn = agent.run(input, imagePath)
             _uiState.value = when (turn) {
                 is AgentTurn.ToolCall -> AgentUiState.Result(turn.reply)
                 is AgentTurn.Reply    -> AgentUiState.Result(turn.text)

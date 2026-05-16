@@ -75,7 +75,6 @@ import dev.ishubhamsingh.shelfly.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.ByteArrayOutputStream
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -91,21 +90,21 @@ fun AgentSheet(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    // Pending image: thumbnail for display, bytes for the model
-    var pendingThumbnail  by remember { mutableStateOf<Bitmap?>(null) }
-    var pendingImageBytes by remember { mutableStateOf<ByteArray?>(null) }
-    var showImageMenu     by remember { mutableStateOf(false) }
+    // Pending image: thumbnail for display, file path for the model
+    var pendingThumbnail by remember { mutableStateOf<Bitmap?>(null) }
+    var pendingImagePath by remember { mutableStateOf<String?>(null) }
+    var showImageMenu    by remember { mutableStateOf(false) }
     // URI of the temp file created for camera capture
-    var cameraOutputUri   by remember { mutableStateOf<Uri?>(null) }
+    var cameraOutputUri  by remember { mutableStateOf<Uri?>(null) }
 
-    fun clearImage() { pendingThumbnail = null; pendingImageBytes = null }
+    fun clearImage() { pendingThumbnail = null; pendingImagePath = null }
     fun sendAndClear() {
-        viewModel.run(input, pendingImageBytes)
+        viewModel.run(input, pendingImagePath)
         input = ""
         clearImage()
     }
 
-    // Shared: decode a URI to a thumbnail Bitmap + JPEG bytes
+    // Shared: decode URI → thumbnail, save to temp file, store path for model
     fun processUri(uri: Uri) {
         scope.launch(Dispatchers.IO) {
             // Pass 1: bounds only
@@ -121,11 +120,16 @@ fun AgentSheet(
                 BitmapFactory.decodeStream(it, null, opts)
             } ?: return@launch
 
-            val out = ByteArrayOutputStream()
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 85, out)
+            // Save to a temp file — Content.ImageFile reads the file directly,
+            // which avoids the raw-pixel format issue with Content.ImageBytes
+            val tempFile = File(context.cacheDir, "camera")
+                .also { it.mkdirs() }
+                .let { File(it, "agent_${System.currentTimeMillis()}.jpg") }
+            tempFile.outputStream().use { bitmap.compress(Bitmap.CompressFormat.JPEG, 90, it) }
+
             withContext(Dispatchers.Main) {
-                pendingThumbnail  = bitmap
-                pendingImageBytes = out.toByteArray()
+                pendingThumbnail = bitmap
+                pendingImagePath = tempFile.absolutePath
             }
         }
     }
@@ -266,7 +270,7 @@ fun AgentSheet(
             Spacer(Modifier.height(16.dp))
 
             val isLoading = uiState is AgentUiState.Loading
-            val canSend   = !isLoading && (input.isNotBlank() || pendingImageBytes != null)
+            val canSend   = !isLoading && (input.isNotBlank() || pendingImagePath != null)
 
             // Thumbnail strip — visible only when an image is attached
             if (pendingThumbnail != null) {

@@ -1,15 +1,9 @@
 package dev.ishubhamsingh.shelfly.agent
 
 import android.content.Context
-import android.graphics.BitmapFactory
 import com.google.ai.edge.litertlm.Backend
+import com.google.ai.edge.litertlm.Content
 import com.google.ai.edge.litertlm.Contents
-import com.google.mlkit.vision.common.InputImage
-import com.google.mlkit.vision.text.TextRecognition
-import com.google.mlkit.vision.text.latin.TextRecognizerOptions
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlin.coroutines.suspendCoroutine
 import com.google.ai.edge.litertlm.ConversationConfig
 import com.google.ai.edge.litertlm.Engine
 import com.google.ai.edge.litertlm.EngineConfig
@@ -40,10 +34,6 @@ class GemmaAgent @Inject constructor(
         .newSingleThreadExecutor { r -> Thread(r, "gemma-inference").apply { isDaemon = true } }
         .asCoroutineDispatcher()
 
-    // ML Kit text recogniser — reusable singleton, no per-call overhead
-    private val textRecognizer by lazy {
-        TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
-    }
 
     /** Pre-loads the engine so the first real inference has no cold-start lag. */
     suspend fun warmUp() = mutex.withLock {
@@ -54,7 +44,7 @@ class GemmaAgent @Inject constructor(
         }
     }
 
-    suspend fun run(userInput: String, imageBytes: ByteArray? = null): AgentTurn = mutex.withLock {
+    suspend fun run(userInput: String, imagePath: String? = null): AgentTurn = mutex.withLock {
         val modelState = modelManager.state.value
         if (modelState !is ModelState.Ready) {
             return AgentTurn.Failure("model_not_ready")
@@ -72,22 +62,21 @@ class GemmaAgent @Inject constructor(
                 )
                 val conversation = llm.createConversation(conversationConfig)
 
-                // If image bytes are present, run ML Kit OCR first and inject the
-                // extracted label text into the prompt. gemma-4-E2B-it is text-only;
-                // passing Content.ImageBytes to it crashes the native engine.
-                val promptText = if (imageBytes != null) {
-                    val labelText = runCatching { extractLabelText(imageBytes) }.getOrNull()
-                    val base = userInput.ifBlank { "Add this item to my shelf." }
-                    if (!labelText.isNullOrBlank())
-                        "Product label text:\n$labelText\n\n$base"
-                    else
-                        base
-                } else {
-                    userInput
-                }
+                // If an image path is provided, pass it directly to the model.
+                // gemma-4-E2B-it is multimodal; Content.ImageFile lets the engine
+                // decode the JPEG itself (Content.ImageBytes crashes because it
+                // expects raw pixels, not compressed data).
+                val promptText = if (imagePath != null && userInput.isBlank())
+                    "Add this item to my shelf."
+                else userInput
+
+                val userContent = if (imagePath != null)
+                    Contents.of(Content.ImageFile(imagePath), Content.Text(promptText))
+                else
+                    Contents.of(promptText)
 
                 val raw = try {
-                    conversation.sendMessage(promptText).toString()
+                    conversation.sendMessage(userContent).toString()
                 } finally {
                     conversation.close()
                 }
@@ -117,27 +106,6 @@ class GemmaAgent @Inject constructor(
             } catch (e: Exception) {
                 AgentTurn.Failure(e.message ?: "inference_error")
             }
-        }
-    }
-
-    /**
-     * Runs ML Kit text recognition on [imageBytes] and returns the raw recognised
-     * text, or null if recognition failed or produced nothing useful.
-     * Must be called from a background thread (ML Kit itself is non-blocking via
-     * callback, but the suspendCoroutine wrapper makes it safe from any coroutine).
-     */
-    private suspend fun extractLabelText(imageBytes: ByteArray): String? {
-        val bitmap = BitmapFactory.decodeByteArray(imageBytes, 0, imageBytes.size)
-            ?: return null
-        val image = InputImage.fromBitmap(bitmap, 0)
-        return suspendCoroutine { cont ->
-            textRecognizer.process(image)
-                .addOnSuccessListener { result ->
-                    cont.resume(result.text.takeIf { it.isNotBlank() })
-                }
-                .addOnFailureListener { e ->
-                    cont.resumeWithException(e)
-                }
         }
     }
 

@@ -104,9 +104,6 @@ dependencies {
     // LiteRT-LM — on-device LLM inference (main agent)
     implementation(libs.litertlm.android)
 
-    // ML Kit Text Recognition — OCR for product label image scanning
-    implementation(libs.mlkit.text.recognition)
-
     // OkHttp — model download
     implementation(libs.okhttp)
 }
