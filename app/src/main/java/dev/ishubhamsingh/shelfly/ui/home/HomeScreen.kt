@@ -143,7 +143,7 @@ fun HomeScreen(
         },
         floatingActionButton = {
             ExtendedFloatingActionButton(
-                onClick        = { if (isCapable) showAddSheet = true else onNavigateToForm() },
+                onClick        = { if (isCapable || modelIsReady) showAddSheet = true else onNavigateToForm() },
                 icon           = { Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.cd_add_item)) },
                 text           = { Text(stringResource(R.string.form_add_cta)) },
                 containerColor = MaterialTheme.colorScheme.primaryContainer,
