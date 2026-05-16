@@ -2,6 +2,7 @@ package dev.ishubhamsingh.shelfly.agent
 
 import android.content.Context
 import com.google.ai.edge.litertlm.Backend
+import com.google.ai.edge.litertlm.Content
 import com.google.ai.edge.litertlm.Contents
 import com.google.ai.edge.litertlm.ConversationConfig
 import com.google.ai.edge.litertlm.Engine
@@ -42,7 +43,7 @@ class GemmaAgent @Inject constructor(
         }
     }
 
-    suspend fun run(userInput: String): AgentTurn = mutex.withLock {
+    suspend fun run(userInput: String, imageBytes: ByteArray? = null): AgentTurn = mutex.withLock {
         val modelState = modelManager.state.value
         if (modelState !is ModelState.Ready) {
             return AgentTurn.Failure("model_not_ready")
@@ -59,8 +60,21 @@ class GemmaAgent @Inject constructor(
                     samplerConfig     = SamplerConfig(topK = 1, topP = 1.0, temperature = 1.0),
                 )
                 val conversation = llm.createConversation(conversationConfig)
+
+                // If image bytes are provided, send them alongside the text.
+                // Fall back to the default label-reading prompt when the user
+                // typed nothing (they just tapped the camera button and hit Send).
+                val promptText = if (imageBytes != null && userInput.isBlank())
+                    "Read this product label and add the item to my shelf."
+                else userInput
+
+                val userContent = if (imageBytes != null)
+                    Contents.of(Content.ImageBytes(imageBytes), Content.Text(promptText))
+                else
+                    Contents.of(Content.Text(promptText))
+
                 val raw = try {
-                    conversation.sendMessage(userInput).toString()
+                    conversation.sendMessage(userContent).toString()
                 } finally {
                     conversation.close()
                 }
@@ -191,6 +205,12 @@ bestBeforeMonths : integer  shelf-life in whole months after manufacture
 withinDays : integer  number of days ahead to check
 
 id : string  UUID of the target item
+
+## Vision
+If an image is included with the message, it is a product label or packaging.
+Read the label to extract the item name, expiry date/shelf life, and category.
+Use addItem if you can read an explicit expiry date or duration.
+Use addItemFromMfg if the label shows a manufacture date and a "best before N months" window.
 """.trimIndent()
 
 // ── Synthetic reply ───────────────────────────────────────────────────────────
