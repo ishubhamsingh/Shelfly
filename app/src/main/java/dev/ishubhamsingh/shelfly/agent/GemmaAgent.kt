@@ -58,7 +58,10 @@ class GemmaAgent @Inject constructor(
 
                 val conversationConfig = ConversationConfig(
                     systemInstruction = Contents.of(systemPrompt),
-                    samplerConfig     = SamplerConfig(topK = 1, topP = 1.0, temperature = 1.0),
+                    // Match Edge Gallery defaults: topK=64, topP=0.95, temp=1.0
+                    // topK=1 (greedy) was too restrictive for vision — the model needs
+                    // sampling headroom when reasoning about image content before JSON.
+                    samplerConfig     = SamplerConfig(topK = 64, topP = 0.95, temperature = 1.0),
                 )
                 val conversation = llm.createConversation(conversationConfig)
 
