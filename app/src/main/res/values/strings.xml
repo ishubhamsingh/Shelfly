@@ -98,6 +98,8 @@
     <string name="agent_sheet_placeholder">e.g. Add milk expiring Friday</string>
     <string name="agent_sheet_send">Send</string>
     <string name="agent_sheet_error">Something went wrong: %s</string>
+    <string name="agent_speech_prompt">Tell me what to add or ask about your shelf</string>
+    <string name="agent_speech_mic">Voice input</string>
 
     <!-- Rotating assistant prompts -->
     <string-array name="assistant_prompts">

@@ -1,5 +1,11 @@
 package dev.ishubhamsingh.shelfly.ui.agent
 
+import android.app.Activity
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.speech.RecognizerIntent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,10 +21,12 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
@@ -35,6 +43,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
@@ -52,6 +61,26 @@ fun AgentSheet(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var input by remember { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
+    val context = LocalContext.current
+
+    val speechLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val text = result.data
+                ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+                ?.firstOrNull()
+            if (!text.isNullOrBlank()) input = text
+        }
+    }
+
+    fun launchSpeech() {
+        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+            putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            putExtra(RecognizerIntent.EXTRA_PROMPT, context.getString(R.string.agent_speech_prompt))
+        }
+        try { speechLauncher.launch(intent) } catch (_: ActivityNotFoundException) { /* no STT engine */ }
+    }
 
     LaunchedEffect(Unit) { viewModel.reset() }
 
@@ -154,6 +183,16 @@ fun AgentSheet(
                         input = ""
                     }),
                 )
+                IconButton(
+                    onClick  = { launchSpeech() },
+                    enabled  = !isLoading,
+                ) {
+                    Icon(
+                        imageVector        = Icons.Filled.Mic,
+                        contentDescription = stringResource(R.string.agent_speech_mic),
+                        tint               = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 FilledIconButton(
                     onClick  = { viewModel.run(input); input = "" },
                     enabled  = !isLoading && input.isNotBlank(),
