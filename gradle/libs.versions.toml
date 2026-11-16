@@ -12,7 +12,7 @@ hilt                  = "2.59.2"
 hiltAndroidx          = "1.2.0"
 workManager           = "2.9.1"
 datastore             = "1.1.1"
-appfunctions          = "1.0.0-alpha08"
+appfunctions          = "1.0.0-rc01"
 mediapipeTasksGenai   = "0.10.27"
 mlkitGenaiPrompt      = "1.0.0-beta4"
 mlkitTextRecognition  = "16.0.1"
@@ -59,7 +59,6 @@ datastore-preferences = { group = "androidx.datastore", name = "datastore-prefer
 
 # AppFunctions
 appfunctions          = { group = "androidx.appfunctions", name = "appfunctions",          version.ref = "appfunctions" }
-appfunctions-service  = { group = "androidx.appfunctions", name = "appfunctions-service",  version.ref = "appfunctions" }
 appfunctions-compiler = { group = "androidx.appfunctions", name = "appfunctions-compiler", version.ref = "appfunctions" }
 
 # MediaPipe Tasks GenAI (debug spike only)

@@ -1,8 +1,5 @@
 package dev.ishubhamsingh.shelfly.agent
 
-import android.content.Context
-import androidx.appfunctions.AppFunctionContext
-import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.ishubhamsingh.shelfly.appfunctions.ShelflyAppFunctions
 import dev.ishubhamsingh.shelfly.appfunctions.dto.ItemDto
 import org.json.JSONArray
@@ -13,13 +10,8 @@ import javax.inject.Singleton
 
 @Singleton
 class AgentToolCatalog @Inject constructor(
-    @ApplicationContext private val context: Context,
     private val appFunctions: ShelflyAppFunctions,
 ) {
-    private val appFunctionContext = object : AppFunctionContext {
-        override val context: Context = this@AgentToolCatalog.context
-    }
-
     // ── Tool definitions (JSON Schema) ────────────────────────────────────────
 
     fun toolDefinitionsJson(): String = TOOL_DEFINITIONS_JSON
@@ -41,7 +33,6 @@ class AgentToolCatalog @Inject constructor(
                     val expiryDate = resolveExpiry(args)
                     val (qty, unit) = parseAmount(args.optStringOrNull("amount"))
                     val result = appFunctions.addItem(
-                        appFunctionContext = appFunctionContext,
                         name       = args.getString("name"),
                         expiryDate = expiryDate,
                         category   = args.getString("category"),
@@ -58,7 +49,6 @@ class AgentToolCatalog @Inject constructor(
                 "addItemFromMfg" -> {
                     val (qty, unit) = parseAmount(args.optStringOrNull("amount"))
                     val result = appFunctions.addItemFromMfg(
-                        appFunctionContext = appFunctionContext,
                         name              = args.getString("name"),
                         mfgDate           = args.getString("mfgDate"),
                         bestBeforeMonths  = args.getInt("bestBeforeMonths"),
@@ -75,7 +65,6 @@ class AgentToolCatalog @Inject constructor(
 
                 "listExpiringSoon" -> {
                     val items = appFunctions.listExpiringSoon(
-                        appFunctionContext = appFunctionContext,
                         withinDays        = args.getInt("withinDays"),
                     )
                     JSONObject().apply {
@@ -86,7 +75,7 @@ class AgentToolCatalog @Inject constructor(
                 }
 
                 "listExpired" -> {
-                    val items = appFunctions.listExpired(appFunctionContext)
+                    val items = appFunctions.listExpired()
                     JSONObject().apply {
                         put("ok", true)
                         put("items", items.toJsonArray())
@@ -96,7 +85,6 @@ class AgentToolCatalog @Inject constructor(
 
                 "listByCategory" -> {
                     val items = appFunctions.listByCategory(
-                        appFunctionContext = appFunctionContext,
                         category          = args.getString("category"),
                     )
                     JSONObject().apply {
@@ -108,7 +96,6 @@ class AgentToolCatalog @Inject constructor(
 
                 "getItem" -> {
                     val item = appFunctions.getItem(
-                        appFunctionContext = appFunctionContext,
                         id                = args.getString("id"),
                     )
                     JSONObject().apply {
@@ -119,7 +106,6 @@ class AgentToolCatalog @Inject constructor(
 
                 "markConsumed" -> {
                     val ok = appFunctions.markConsumed(
-                        appFunctionContext = appFunctionContext,
                         id                = args.getString("id"),
                     )
                     JSONObject().apply { put("ok", ok) }
@@ -128,7 +114,6 @@ class AgentToolCatalog @Inject constructor(
                 "updateExpiry" -> {
                     val newExpiry = parseExpiryIn(args.getString("expiryIn")).toString()
                     val item = appFunctions.updateExpiry(
-                        appFunctionContext = appFunctionContext,
                         id                = args.getString("id"),
                         newExpiry         = newExpiry,
                     )
@@ -140,7 +125,6 @@ class AgentToolCatalog @Inject constructor(
 
                 "deleteItem" -> {
                     val ok = appFunctions.deleteItem(
-                        appFunctionContext = appFunctionContext,
                         id                = args.getString("id"),
                     )
                     JSONObject().apply { put("ok", ok) }
@@ -156,7 +140,7 @@ class AgentToolCatalog @Inject constructor(
                         }
                     } else {
                         val item = matches.first()
-                        val ok   = appFunctions.markConsumed(appFunctionContext, item.id)
+                        val ok   = appFunctions.markConsumed(item.id)
                         JSONObject().apply {
                             put("ok", ok)
                             if (ok) put("item", item.toJson())
@@ -174,7 +158,7 @@ class AgentToolCatalog @Inject constructor(
                         }
                     } else {
                         val item = matches.first()
-                        val ok   = appFunctions.deleteItem(appFunctionContext, item.id)
+                        val ok   = appFunctions.deleteItem(item.id)
                         JSONObject().apply {
                             put("ok", ok)
                             if (ok) put("deletedName", item.name)

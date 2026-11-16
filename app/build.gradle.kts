@@ -48,8 +48,7 @@ kotlin {
 }
 
 ksp {
-    // AppFunctions: aggregate functions across modules and use KDoc descriptions
-    arg("appfunctions:aggregateAppFunctions", "true")
+    // AppFunctions: descriptions come from KDoc (isDescribedByKDoc), not predefined schemas
     arg("appfunctions:generateMetadataFromSchema", "false")
     // Room: write schema to disk for migration tracking
     arg("room.schemaLocation", "$projectDir/schemas")
@@ -96,7 +95,6 @@ dependencies {
 
     // AppFunctions
     implementation(libs.appfunctions)
-    implementation(libs.appfunctions.service)
     ksp(libs.appfunctions.compiler)
 
     // MediaPipe Tasks GenAI — debug spike only

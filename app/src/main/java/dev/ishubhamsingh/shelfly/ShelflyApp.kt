@@ -1,30 +1,20 @@
 package dev.ishubhamsingh.shelfly
 
 import android.app.Application
-import androidx.appfunctions.service.AppFunctionConfiguration
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import dagger.hilt.android.HiltAndroidApp
-import dev.ishubhamsingh.shelfly.appfunctions.ShelflyAppFunctions
 import dev.ishubhamsingh.shelfly.notifications.ExpiryWorker
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 @HiltAndroidApp
-class ShelflyApp : Application(),
-    AppFunctionConfiguration.Provider,
-    Configuration.Provider {
+class ShelflyApp : Application(), Configuration.Provider {
 
-    @Inject lateinit var appFunctions: ShelflyAppFunctions
     @Inject lateinit var workerFactory: HiltWorkerFactory
-
-    override val appFunctionConfiguration: AppFunctionConfiguration
-        get() = AppFunctionConfiguration.Builder()
-            .addEnclosingClassFactory(ShelflyAppFunctions::class.java) { appFunctions }
-            .build()
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder()
