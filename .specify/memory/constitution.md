@@ -93,7 +93,6 @@ by measurement more than once.
 - Changes are minimal and scoped to the task. Unrelated refactors are proposed separately.
 - For bugs, the root cause MUST be identified and stated before a fix is made.
 - No commit, push, merge, tag, or release happens without explicit maintainer instruction.
-  Commit messages carry no co-author trailers.
 - After code changes, run `graphify update .` to keep the knowledge graph current.
 
 ## Governance
@@ -108,4 +107,4 @@ by measurement more than once.
 - Compliance is checked during `/speckit-plan` and `/speckit-analyze`, and when reviewing
   changes. Runtime guidance for agents lives in `CLAUDE.md`.
 
-**Version**: 1.0.0 | **Ratified**: 2026-11-14 | **Last Amended**: 2026-11-14
+**Version**: 1.0.1 | **Ratified**: 2026-11-14 | **Last Amended**: 2026-11-17
