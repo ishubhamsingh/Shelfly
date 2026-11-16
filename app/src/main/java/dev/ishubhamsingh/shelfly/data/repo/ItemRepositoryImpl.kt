@@ -50,6 +50,9 @@ class ItemRepositoryImpl @Inject constructor(
     override suspend fun getByCategory(category: Category): List<Item> =
         dao.getByCategory(category)
 
+    override suspend fun searchByName(query: String): List<Item> =
+        dao.searchByName(query)
+
     override suspend fun insert(item: Item) = dao.insert(item)
 
     override suspend fun update(item: Item) = dao.update(item)

@@ -19,6 +19,7 @@ interface ItemRepository {
     suspend fun getExpiringSoon(withinDays: Int): List<Item>
     suspend fun getExpired(): List<Item>
     suspend fun getByCategory(category: Category): List<Item>
+    suspend fun searchByName(query: String): List<Item>
 
     suspend fun insert(item: Item)
     suspend fun update(item: Item)

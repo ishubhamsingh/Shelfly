@@ -77,7 +77,7 @@ fun Context.buildExpiryNotification(items: List<Item>): android.app.Notification
 fun Context.buildSeparateNotifications(items: List<Item>): List<Pair<Int, android.app.Notification>> =
     items.mapIndexed { index, item ->
         val (title, body) = formatSingleExpiryContent(item)
-        val notification  = buildNotification(title, body, listOf(item.name to item.category))
+        val notification  = buildNotification(title, body, listOf(item.name to item.category), item.id)
         (NOTIF_ID + 1 + index) to notification
     }
 

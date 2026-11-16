@@ -37,6 +37,8 @@ android {
 
     kotlinOptions {
         jvmTarget = "11"
+        // LiteRT-LM 0.11.0 is compiled with Kotlin 2.3.0; allow loading its metadata
+        freeCompilerArgs += "-Xskip-metadata-version-check"
     }
 
     buildFeatures {
@@ -95,4 +97,19 @@ dependencies {
     implementation(libs.appfunctions)
     implementation(libs.appfunctions.service)
     ksp(libs.appfunctions.compiler)
+
+    // MediaPipe Tasks GenAI — debug spike only
+    debugImplementation(libs.mediapipe.tasks.genai)
+
+    // ML Kit GenAI Prompt API — Gemini Nano via the AICore system service
+    implementation(libs.mlkit.genai.prompt)
+
+    // ML Kit Text Recognition — locates text so label photos can be tiled
+    implementation(libs.mlkit.text.recognition)
+
+    // LiteRT-LM — on-device LLM inference (main agent)
+    implementation(libs.litertlm.android)
+
+    // OkHttp — model download
+    implementation(libs.okhttp)
 }

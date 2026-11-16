@@ -16,6 +16,7 @@ import dev.ishubhamsingh.shelfly.data.db.ItemDao
 import dev.ishubhamsingh.shelfly.data.db.ShelflyDatabase
 import dev.ishubhamsingh.shelfly.data.repo.ItemRepository
 import dev.ishubhamsingh.shelfly.data.repo.ItemRepositoryImpl
+import okhttp3.OkHttpClient
 import javax.inject.Singleton
 
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "shelfly_settings")
@@ -50,4 +51,8 @@ object DatabaseModule {
     @Singleton
     fun provideWorkManager(@ApplicationContext ctx: Context): WorkManager =
         WorkManager.getInstance(ctx)
+
+    @Provides
+    @Singleton
+    fun provideOkHttpClient(): OkHttpClient = OkHttpClient.Builder().build()
 }

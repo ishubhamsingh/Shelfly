@@ -71,12 +71,21 @@ import java.time.temporal.ChronoUnit
 fun ItemFormScreen(
     itemId: String?,
     onNavigateUp: () -> Unit,
+    /**
+     * Called instead of [onNavigateUp] when the user actually SAVED.
+     *
+     * These have to be distinguishable: callers keep UI alive across a cancel (so Back
+     * returns you where you were) but must tear it down after a save. Collapsing both
+     * into onNavigateUp left the agent's confirm card on screen after saving, which
+     * reads as "nothing happened" and gets the item added twice.
+     */
+    onSaved: () -> Unit = onNavigateUp,
     viewModel: ItemFormViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(state.isSaved) {
-        if (state.isSaved) onNavigateUp()
+        if (state.isSaved) onSaved()
     }
 
     var showDatePicker by remember { mutableStateOf(false) }
@@ -254,9 +263,8 @@ fun ItemFormScreen(
                     singleLine    = true,
                     modifier      = Modifier.fillMaxWidth(),
                 )
-                val units = listOf("g", "kg", "ml", "L", "tablets", "count")
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    units.forEach { u ->
+                    dev.ishubhamsingh.shelfly.domain.model.ShelfUnits.CANONICAL.forEach { u ->
                         FilterChip(
                             selected = state.unit == u,
                             onClick  = { viewModel.setUnit(if (state.unit == u) null else u) },

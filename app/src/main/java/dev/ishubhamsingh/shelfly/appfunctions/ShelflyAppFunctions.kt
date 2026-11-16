@@ -219,4 +219,19 @@ class ShelflyAppFunctions @Inject constructor(
         itemRepo.deleteById(id)
         return true
     }
+
+    // ── Agent-internal helpers (not exposed as @AppFunction) ──────────────────
+
+    /**
+     * Find active (non-consumed) items whose name contains [query] (case-insensitive).
+     * Exact-name matches are sorted first. Used by name-based agent tools.
+     */
+    suspend fun findByName(query: String): List<ItemDto> {
+        val settings = settingsRepo.settings.first()
+        val results  = itemRepo.searchByName(query).map { it.toDto(settings) }
+        // Prefer exact match first; keep partial matches after
+        return results.sortedWith(
+            compareByDescending { it.name.equals(query, ignoreCase = true) }
+        )
+    }
 }

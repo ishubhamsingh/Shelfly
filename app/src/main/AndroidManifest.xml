@@ -4,6 +4,12 @@
 
     <!-- Notification permission (required on API 33+; minSdk is 33 so always needed) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Camera is optional — app works without it; gallery-only path is always available -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <!--
         AppFunctions library declares minSdk 36 internally.
@@ -23,6 +29,17 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Shelfly">
 
+        <!-- FileProvider for sharing camera temp files with the camera app -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
         <!-- Disable default WorkManager initializer; ShelflyApp.Configuration.Provider handles it -->
         <provider
             android:name="androidx.startup.InitializationProvider"
@@ -34,6 +51,16 @@
                 android:value="androidx.startup"
                 tools:node="remove" />
         </provider>
+
+        <!-- WorkManager foreground service — must declare dataSync type to match ForegroundInfo -->
+        <service
+            android:name="androidx.work.impl.foreground.SystemForegroundService"
+            android:foregroundServiceType="dataSync"
+            tools:node="merge" />
+
+        <!-- LiteRT-LM GPU acceleration — optional native libs for OpenCL backend -->
+        <uses-native-library android:name="libvndksupport.so" android:required="false" />
+        <uses-native-library android:name="libOpenCL.so"      android:required="false" />
 
         <activity
             android:name=".MainActivity"
