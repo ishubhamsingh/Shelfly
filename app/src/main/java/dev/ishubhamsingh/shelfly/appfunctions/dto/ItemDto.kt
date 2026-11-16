@@ -2,7 +2,7 @@ package dev.ishubhamsingh.shelfly.appfunctions.dto
 
 import androidx.appfunctions.AppFunctionSerializable
 
-@AppFunctionSerializable
+@AppFunctionSerializable(isDescribedByKDoc = false)
 data class ItemDto(
     val id: String,
     val name: String,

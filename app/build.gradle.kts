@@ -1,6 +1,5 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
@@ -8,7 +7,7 @@ plugins {
 
 android {
     namespace = "dev.ishubhamsingh.shelfly"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "dev.ishubhamsingh.shelfly"
@@ -35,20 +34,21 @@ android {
         targetCompatibility = JavaVersion.VERSION_11
     }
 
-    kotlinOptions {
-        jvmTarget = "11"
-        // LiteRT-LM 0.11.0 is compiled with Kotlin 2.3.0; allow loading its metadata
-        freeCompilerArgs += "-Xskip-metadata-version-check"
-    }
-
     buildFeatures {
         compose = true
     }
 }
 
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+        // LiteRT-LM 0.11.0 is compiled with Kotlin 2.3.0; allow loading its metadata
+        freeCompilerArgs.add("-Xskip-metadata-version-check")
+    }
+}
+
 ksp {
-    // AppFunctions: aggregate functions across modules and use KDoc descriptions
-    arg("appfunctions:aggregateAppFunctions", "true")
+    // AppFunctions: descriptions come from KDoc (isDescribedByKDoc), not predefined schemas
     arg("appfunctions:generateMetadataFromSchema", "false")
     // Room: write schema to disk for migration tracking
     arg("room.schemaLocation", "$projectDir/schemas")
@@ -95,7 +95,6 @@ dependencies {
 
     // AppFunctions
     implementation(libs.appfunctions)
-    implementation(libs.appfunctions.service)
     ksp(libs.appfunctions.compiler)
 
     // MediaPipe Tasks GenAI — debug spike only

@@ -7,9 +7,9 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/Android-13%2B-3DDC84?logo=android&logoColor=white" />
-  <img src="https://img.shields.io/badge/Kotlin-2.1.0-7F52FF?logo=kotlin&logoColor=white" />
+  <img src="https://img.shields.io/badge/Kotlin-2.2.21-7F52FF?logo=kotlin&logoColor=white" />
   <img src="https://img.shields.io/badge/Jetpack%20Compose-2024.12-4285F4?logo=jetpackcompose&logoColor=white" />
-  <img src="https://img.shields.io/badge/AppFunctions-alpha-orange" />
+  <img src="https://img.shields.io/badge/AppFunctions-1.0.0--rc01-orange" />
   <img src="https://img.shields.io/github/license/ishubhamsingh/Shelfly" />
 </p>
 
@@ -64,17 +64,18 @@ Shelfly registers 9 AppFunctions callable by Gemini or any on-device AI agent:
 
 | Layer | Library |
 |---|---|
-| Language | Kotlin 2.1.0 |
+| Language | Kotlin 2.2.21 |
 | UI | Jetpack Compose + Material 3 |
 | Architecture | ViewModel + StateFlow + Unidirectional data flow |
-| Database | Room 2.6.1 (KSP) |
-| Dependency Injection | Hilt 2.52 (KSP) |
+| Database | Room 2.8.4 (KSP) |
+| Dependency Injection | Hilt 2.59.2 (KSP) |
 | Background Work | WorkManager 2.9.1 (HiltWorker) |
 | Preferences | DataStore Preferences |
 | Navigation | Navigation Compose |
-| AppFunctions | `androidx.appfunctions:1.0.0-alpha08` |
+| AppFunctions | `androidx.appfunctions:1.0.0-rc01` |
+| Build | AGP 9.1 · Gradle 9.3 · KSP 2.3 |
 
-**Min SDK:** 33 (Android 13) · **Target / Compile SDK:** 36 (Android 16)
+**Min SDK:** 33 (Android 13) · **Target SDK:** 36 (Android 16) · **Compile SDK:** 37
 
 AppFunctions are runtime-gated to API 36+ — the app runs normally on API 33–35 without the AI agent integration.
 
@@ -106,9 +107,10 @@ cd Shelfly
 ./gradlew assembleDebug
 ```
 
-Requires **Android Studio Meerkat** or newer and a device / emulator running **Android 13 (API 33)** or higher.
+Requires JDK 17+, an Android Studio version that supports **AGP 9.1**, and the **Android SDK Platform 37** (`platforms;android-37.0`). Runs on a device / emulator with **Android 13 (API 33)** or higher.
 
-> AppFunctions only work on API 36 Google APIs images. On API 33–35 the app runs normally but the AI agent integration is unavailable.
+> AppFunctions need API 36 or newer. On API 33–35 the app runs normally but the AI agent integration is unavailable.
+> For ADB testing, use an **API 37 Google APIs** emulator image: the API 36 emulator image ships with the AppFunctions flags disabled, so `cmd app_function` is unavailable there.
 
 ---
 
@@ -121,7 +123,7 @@ adb shell cmd app_function list-app-functions --package dev.ishubhamsingh.shelfl
 # Call the ping function
 adb shell cmd app_function execute-app-function \
   --package dev.ishubhamsingh.shelfly \
-  --function dev.ishubhamsingh.shelfly.appfunctions.ShelflyAppFunctions#ping \
+  --function dev.ishubhamsingh.shelfly.appfunctions.ShelflyAppFunctionService#ping \
   --parameters '{"message":"hello"}'
 ```
 

@@ -1,7 +1,5 @@
 package dev.ishubhamsingh.shelfly.appfunctions
 
-import androidx.appfunctions.AppFunctionContext
-import androidx.appfunctions.service.AppFunction
 import dev.ishubhamsingh.shelfly.appfunctions.dto.ItemDto
 import dev.ishubhamsingh.shelfly.appfunctions.mapping.toDto
 import dev.ishubhamsingh.shelfly.data.repo.ItemRepository
@@ -14,6 +12,10 @@ import java.time.LocalDate
 import java.util.UUID
 import javax.inject.Inject
 
+/**
+ * Shelfly's data operations. Exposed to external agents through [ShelflyAppFunctionService]
+ * (which declares the AppFunctions) and called directly by the in-app agent.
+ */
 class ShelflyAppFunctions @Inject constructor(
     private val itemRepo: ItemRepository,
     private val settingsRepo: SettingsRepository,
@@ -25,9 +27,7 @@ class ShelflyAppFunctions @Inject constructor(
      * Echo function used during toolchain verification.
      * Returns the [message] prefixed with "pong: ".
      */
-    @AppFunction(isDescribedByKDoc = true)
     suspend fun ping(
-        appFunctionContext: AppFunctionContext,
         message: String,
     ): String = "pong: $message"
 
@@ -44,9 +44,7 @@ class ShelflyAppFunctions @Inject constructor(
      * @param notes Optional freeform notes.
      * @return The created item as a DTO.
      */
-    @AppFunction(isDescribedByKDoc = true)
     suspend fun addItem(
-        appFunctionContext: AppFunctionContext,
         name: String,
         expiryDate: String,
         category: String,
@@ -81,9 +79,7 @@ class ShelflyAppFunctions @Inject constructor(
      * @param notes Optional notes.
      * @return The created item with the computed expiry date.
      */
-    @AppFunction(isDescribedByKDoc = true)
     suspend fun addItemFromMfg(
-        appFunctionContext: AppFunctionContext,
         name: String,
         mfgDate: String,
         bestBeforeMonths: Int,
@@ -114,9 +110,7 @@ class ShelflyAppFunctions @Inject constructor(
      * @param withinDays How many days ahead to look.
      * @return Items expiring in that window, sorted by expiry date ascending.
      */
-    @AppFunction(isDescribedByKDoc = true)
     suspend fun listExpiringSoon(
-        appFunctionContext: AppFunctionContext,
         withinDays: Int,
     ): List<ItemDto> {
         val settings = settingsRepo.settings.first()
@@ -128,10 +122,7 @@ class ShelflyAppFunctions @Inject constructor(
      *
      * @return Expired items sorted by expiry date descending.
      */
-    @AppFunction(isDescribedByKDoc = true)
-    suspend fun listExpired(
-        appFunctionContext: AppFunctionContext,
-    ): List<ItemDto> {
+    suspend fun listExpired(): List<ItemDto> {
         val settings = settingsRepo.settings.first()
         return itemRepo.getExpired().map { it.toDto(settings) }
     }
@@ -142,9 +133,7 @@ class ShelflyAppFunctions @Inject constructor(
      * @param category One of FOOD, MEDICINE, COSMETIC, OTHER.
      * @return All items in that category sorted by expiry date.
      */
-    @AppFunction(isDescribedByKDoc = true)
     suspend fun listByCategory(
-        appFunctionContext: AppFunctionContext,
         category: String,
     ): List<ItemDto> {
         val settings = settingsRepo.settings.first()
@@ -158,9 +147,7 @@ class ShelflyAppFunctions @Inject constructor(
      * @param id The UUID of the item.
      * @return The item DTO, or null if not found.
      */
-    @AppFunction(isDescribedByKDoc = true)
     suspend fun getItem(
-        appFunctionContext: AppFunctionContext,
         id: String,
     ): ItemDto? {
         val settings = settingsRepo.settings.first()
@@ -173,9 +160,7 @@ class ShelflyAppFunctions @Inject constructor(
      * @param id The UUID of the item to mark consumed.
      * @return true if the item was found and updated, false otherwise.
      */
-    @AppFunction(isDescribedByKDoc = true)
     suspend fun markConsumed(
-        appFunctionContext: AppFunctionContext,
         id: String,
     ): Boolean {
         val item = itemRepo.getById(id) ?: return false
@@ -190,9 +175,7 @@ class ShelflyAppFunctions @Inject constructor(
      * @param newExpiry New ISO-8601 expiry date, e.g. "2026-09-30".
      * @return The updated item DTO, or null if the item was not found.
      */
-    @AppFunction(isDescribedByKDoc = true)
     suspend fun updateExpiry(
-        appFunctionContext: AppFunctionContext,
         id: String,
         newExpiry: String,
     ): ItemDto? {
@@ -209,9 +192,7 @@ class ShelflyAppFunctions @Inject constructor(
      * @param id The UUID of the item to delete.
      * @return true if the item existed and was deleted, false otherwise.
      */
-    @AppFunction(isDescribedByKDoc = true)
     suspend fun deleteItem(
-        appFunctionContext: AppFunctionContext,
         id: String,
     ): Boolean {
         val exists = itemRepo.getById(id) != null
@@ -220,7 +201,7 @@ class ShelflyAppFunctions @Inject constructor(
         return true
     }
 
-    // ── Agent-internal helpers (not exposed as @AppFunction) ──────────────────
+    // ── Agent-internal helpers (not exposed as AppFunctions) ──────────────────
 
     /**
      * Find active (non-consumed) items whose name contains [query] (case-insensitive).
