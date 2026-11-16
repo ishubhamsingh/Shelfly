@@ -3,6 +3,7 @@ package dev.ishubhamsingh.shelfly.ui.settings
 import android.app.NotificationManager
 import android.content.Intent
 import android.provider.Settings
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,16 +17,27 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.SignalCellularAlt
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.DataUsage
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Medication
+import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.Restaurant
@@ -33,11 +45,19 @@ import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Wifi
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
@@ -57,6 +77,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
@@ -69,6 +91,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ishubhamsingh.shelfly.R
+import dev.ishubhamsingh.shelfly.agent.AiCoreState
 import dev.ishubhamsingh.shelfly.agent.ModelState
 import dev.ishubhamsingh.shelfly.domain.model.Category
 
@@ -81,6 +104,7 @@ fun SettingsScreen(
     val settings        by viewModel.settings.collectAsStateWithLifecycle()
     val workerScheduled by viewModel.workerScheduled.collectAsStateWithLifecycle()
     val modelState      by viewModel.modelState.collectAsStateWithLifecycle()
+    val aiCoreState     by viewModel.aiCoreState.collectAsStateWithLifecycle()
     val context          = LocalContext.current
 
     // Re-check permission on every resume (user may have changed it in system settings)
@@ -261,10 +285,15 @@ fun SettingsScreen(
 
             // ── AI Scanning card ───────────────────────────────────────────────
             AiScanningCard(
-                state    = modelState,
-                onDownload = { viewModel.downloadModel(dev.ishubhamsingh.shelfly.agent.GemmaModelManager.MODEL_DOWNLOAD_URL) },
-                onCancel = { viewModel.cancelModelDownload() },
-                onDelete = { viewModel.deleteModel() },
+                state          = modelState,
+                aiCoreState    = aiCoreState,
+                onEnableAiCore = { viewModel.enableAiCore() },
+                onDownload     = { viewModel.downloadModel(dev.ishubhamsingh.shelfly.agent.GemmaModelManager.MODEL_DOWNLOAD_URL) },
+                onPause        = { viewModel.pauseModelDownload() },
+                onResume       = { viewModel.resumeModelDownload() },
+                onCancel       = { viewModel.cancelModelDownload() },
+                onDelete       = { viewModel.deleteModel() },
+                onTryAssistant = onNavigateUp,
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -563,158 +592,900 @@ private fun SwitchRow(
     }
 }
 
-// ── AI Scanning card ───────────────────────────────────────────────────────────
+// ── AI Assistant card ──────────────────────────────────────────────────────────
+
+private fun isOnWifi(context: android.content.Context): Boolean {
+    val cm   = context.getSystemService(ConnectivityManager::class.java)
+    val caps = cm.getNetworkCapabilities(cm.activeNetwork)
+    return caps?.hasTransport(NetworkCapabilities.TRANSPORT_WIFI) == true
+}
 
 @Composable
 private fun AiScanningCard(
-    state: ModelState,
-    onDownload: () -> Unit,
-    onCancel: () -> Unit,
-    onDelete: () -> Unit,
+    state          : ModelState,
+    aiCoreState    : AiCoreState,
+    onEnableAiCore : () -> Unit,
+    onDownload     : () -> Unit,
+    onPause        : () -> Unit,
+    onResume       : () -> Unit,
+    onCancel       : () -> Unit,
+    onDelete       : () -> Unit,
+    onTryAssistant : () -> Unit,
 ) {
     val context = LocalContext.current
-    var showDownloadDialog by remember { mutableStateOf(false) }
+    // Two-dialog download flow: Wi-Fi → confirm dialog; mobile → data-warning dialog
+    var showWifiConfirmDialog  by remember { mutableStateOf(false) }
+    var showMobileDataDialog   by remember { mutableStateOf(false) }
+    var showDeleteDialog       by remember { mutableStateOf(false) }
 
-    if (showDownloadDialog) {
-        DownloadConfirmDialog(
-            context   = context,
-            onConfirm = { showDownloadDialog = false; onDownload() },
-            onDismiss = { showDownloadDialog = false },
+    fun handleDownloadTap() {
+        if (isOnWifi(context)) showWifiConfirmDialog = true
+        else                   showMobileDataDialog  = true
+    }
+
+    if (showWifiConfirmDialog) {
+        WifiDownloadConfirmDialog(
+            onConfirm = { showWifiConfirmDialog = false; onDownload() },
+            onDismiss = { showWifiConfirmDialog = false },
+        )
+    }
+    if (showMobileDataDialog) {
+        MobileDataWarningDialog(
+            onWaitForWifi = { showMobileDataDialog = false },
+            onContinue    = { showMobileDataDialog = false; onDownload() },
+        )
+    }
+    if (showDeleteDialog) {
+        DeleteConfirmDialog(
+            onConfirm = { showDeleteDialog = false; onDelete() },
+            onDismiss = { showDeleteDialog = false },
         )
     }
 
     SettingsCard {
-        SectionHeader(
-            icon  = Icons.Filled.Info,
-            label = stringResource(R.string.settings_ai_header),
-        )
-        HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
-
+        // ── Header: sparkle + "AI Assistant" + "Experimental" chip ───────
         Row(
-            modifier          = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 12.dp),
+            modifier          = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                when (state) {
-                    is ModelState.NotDownloaded -> {
-                        Text(
-                            stringResource(R.string.settings_ai_status_not_downloaded),
-                            style = MaterialTheme.typography.bodyMedium,
-                        )
-                        Text(
-                            stringResource(R.string.settings_ai_status_not_downloaded_sub),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    is ModelState.Downloading -> {
-                        val progressText = if (state.totalBytes > 0) {
-                            stringResource(
-                                R.string.settings_ai_progress_bytes,
-                                state.downloadedBytes / (1024 * 1024),
-                                state.totalBytes / (1024 * 1024),
-                                (state.progress * 100).toInt(),
-                            )
-                        } else {
-                            stringResource(R.string.settings_ai_progress_pct, (state.progress * 100).toInt())
-                        }
-                        Text(progressText, style = MaterialTheme.typography.bodyMedium)
-                        Spacer(modifier = Modifier.height(6.dp))
-                        androidx.compose.material3.LinearProgressIndicator(
-                            progress = { state.progress },
-                            modifier = Modifier.fillMaxWidth(0.85f),
-                        )
-                    }
-                    is ModelState.Ready -> {
-                        val mb = state.sizeBytes / (1024 * 1024)
-                        Text(
-                            stringResource(R.string.settings_ai_status_ready),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.primary,
-                        )
-                        Text(
-                            stringResource(R.string.settings_ai_size_mb, mb),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    is ModelState.Error -> {
-                        Text(
-                            stringResource(R.string.settings_ai_status_error, state.message),
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            when (state) {
-                is ModelState.NotDownloaded, is ModelState.Error ->
-                    TextButton(onClick = { showDownloadDialog = true }) {
-                        Text(stringResource(R.string.settings_ai_action_download))
-                    }
-                is ModelState.Downloading ->
-                    TextButton(onClick = onCancel) {
-                        Text(stringResource(R.string.settings_ai_action_cancel))
-                    }
-                is ModelState.Ready ->
-                    TextButton(onClick = onDelete) {
-                        Text(
-                            stringResource(R.string.settings_ai_action_delete),
-                            color = MaterialTheme.colorScheme.error,
-                        )
-                    }
+            Icon(
+                imageVector        = Icons.Filled.AutoAwesome,
+                contentDescription = null,
+                tint               = MaterialTheme.colorScheme.primary,
+                modifier           = Modifier.size(20.dp),
+            )
+            Text(
+                text  = stringResource(R.string.settings_ai_header),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
+            Surface(
+                color = MaterialTheme.colorScheme.tertiaryContainer,
+                shape = MaterialTheme.shapes.extraSmall,
+            ) {
+                Text(
+                    text     = stringResource(R.string.settings_ai_experimental_badge),
+                    style    = MaterialTheme.typography.labelSmall,
+                    color    = MaterialTheme.colorScheme.onTertiaryContainer,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                )
             }
         }
+
+        HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
+
+        // Nano takes precedence over the downloaded model: it costs no app-side bytes,
+        // the system keeps it updated, and it measured at least as accurate. The Gemma
+        // download is only surfaced when Nano cannot serve this device.
+        when {
+            aiCoreState is AiCoreState.Ready -> AiCoreReadySection(
+                onTryAssistant = onTryAssistant,
+            )
+
+            aiCoreState is AiCoreState.Downloading -> AiCoreEnablingSection()
+
+            aiCoreState is AiCoreState.Downloadable && state is ModelState.NotDownloaded ->
+                AiCoreOfferSection(
+                    onEnable      = onEnableAiCore,
+                    onDownloadAlt = { handleDownloadTap() },
+                )
+
+            else -> when (state) {
+            is ModelState.NotDownloaded -> AiIdleSection(
+                onDownload = { handleDownloadTap() },
+            )
+            is ModelState.Downloading -> AiDownloadingSection(
+                state    = state,
+                onPause  = onPause,
+                onCancel = onCancel,
+                context  = context,
+            )
+            is ModelState.Paused -> AiPausedSection(
+                state    = state,
+                onResume = onResume,
+                onCancel = onCancel,
+            )
+            is ModelState.Ready -> AiReadySection(
+                state          = state,
+                onTryAssistant = onTryAssistant,
+                onDelete       = { showDeleteDialog = true },
+            )
+            is ModelState.Error -> AiErrorSection(
+                message    = state.message,
+                onDownload = { handleDownloadTap() },
+            )
+            }
+        }
+
         Spacer(modifier = Modifier.height(4.dp))
     }
 }
 
+// ── Gemini Nano (AICore) sections ─────────────────────────────────────────────
+
 @Composable
-private fun DownloadConfirmDialog(
-    context: android.content.Context,
-    onConfirm: () -> Unit,
-    onDismiss: () -> Unit,
+private fun AiCoreReadySection(onTryAssistant: () -> Unit) {
+    Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
+        Text(
+            text  = stringResource(R.string.settings_aicore_ready_title),
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text  = stringResource(R.string.settings_aicore_ready_body),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        FilledTonalButton(onClick = onTryAssistant) {
+            Text(stringResource(R.string.settings_ai_try_assistant))
+        }
+    }
+}
+
+@Composable
+private fun AiCoreEnablingSection() {
+    Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
+        Text(
+            text  = stringResource(R.string.settings_aicore_enabling_title),
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        // Indeterminate on purpose: AICore hands the download to Android System
+        // Intelligence out-of-process and reports no byte progress, so a percentage
+        // bar here would be fabricated.
+        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text  = stringResource(R.string.settings_aicore_enabling_body),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun AiCoreOfferSection(
+    onEnable      : () -> Unit,
+    onDownloadAlt : () -> Unit,
 ) {
-    val isOnWifi = remember {
-        val cm = context.getSystemService(android.net.ConnectivityManager::class.java)
-        val caps = cm.getNetworkCapabilities(cm.activeNetwork)
-        caps?.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI) == true
+    Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
+        Text(
+            text  = stringResource(R.string.settings_aicore_offer_title),
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text  = stringResource(R.string.settings_aicore_offer_body),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        FilledTonalButton(onClick = onEnable) {
+            Text(stringResource(R.string.settings_aicore_enable_cta))
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        TextButton(onClick = onDownloadAlt) {
+            Text(stringResource(R.string.settings_aicore_download_instead))
+        }
+    }
+}
+
+// ── NotDownloaded ─────────────────────────────────────────────────────────────
+
+@Composable
+private fun AiIdleSection(onDownload: () -> Unit) {
+    // Description
+    Text(
+        text     = stringResource(R.string.settings_ai_idle_desc),
+        style    = MaterialTheme.typography.bodySmall,
+        color    = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+    )
+
+    // Privacy callout
+    Surface(
+        color    = MaterialTheme.colorScheme.primaryContainer,
+        shape    = MaterialTheme.shapes.medium,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp),
+    ) {
+        Row(
+            modifier          = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(
+                imageVector        = Icons.Filled.Lock,
+                contentDescription = null,
+                tint               = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier           = Modifier.size(18.dp),
+            )
+            Text(
+                text  = stringResource(R.string.settings_ai_privacy_callout),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+        }
     }
 
-    androidx.compose.material3.AlertDialog(
-        onDismissRequest = onDismiss,
-        title  = { Text(stringResource(R.string.settings_ai_download_dialog_title)) },
-        text   = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(stringResource(R.string.settings_ai_download_dialog_body))
-                if (!isOnWifi) {
-                    Surface(
-                        color  = MaterialTheme.colorScheme.errorContainer,
-                        shape  = MaterialTheme.shapes.small,
+    Spacer(modifier = Modifier.height(4.dp))
+
+    // Model size row
+    AiStorageRow(
+        label = stringResource(R.string.settings_ai_model_size_label),
+        value = stringResource(R.string.settings_ai_model_size),
+        hint  = stringResource(R.string.settings_ai_wifi_hint),
+    )
+
+    HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
+
+    // Full-width Download button
+    Button(
+        onClick   = onDownload,
+        modifier  = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 12.dp),
+        shape     = MaterialTheme.shapes.extraLarge,
+    ) {
+        Icon(
+            imageVector        = Icons.Filled.Download,
+            contentDescription = null,
+            modifier           = Modifier.size(18.dp),
+        )
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(stringResource(R.string.settings_ai_download_cta))
+    }
+}
+
+// ── Downloading ───────────────────────────────────────────────────────────────
+
+@Composable
+private fun AiDownloadingSection(
+    state    : ModelState.Downloading,
+    onPause  : () -> Unit,
+    onCancel : () -> Unit,
+    context  : android.content.Context,
+) {
+    val pct          = (state.progress * 100).toInt()
+    val downloadedGb = state.downloadedBytes / 1_000_000_000.0
+    val totalGb      = if (state.totalBytes > 0) state.totalBytes / 1_000_000_000.0 else 2.60
+    val onWifi       = remember { isOnWifi(context) }
+
+    // "47%  downloaded" — two-part: large number + smaller suffix
+    Row(
+        modifier          = Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 4.dp),
+        verticalAlignment = Alignment.Bottom,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Text(
+            text  = stringResource(R.string.settings_ai_downloading_pct, pct),
+            style = MaterialTheme.typography.headlineLarge,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text     = stringResource(R.string.settings_ai_downloading_suffix),
+            style    = MaterialTheme.typography.bodyMedium,
+            color    = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 4.dp),
+        )
+    }
+
+    // Thick progress bar
+    LinearProgressIndicator(
+        progress    = { state.progress },
+        modifier    = Modifier
+            .fillMaxWidth()
+            .height(8.dp)
+            .padding(horizontal = 20.dp)
+            .clip(MaterialTheme.shapes.extraSmall),
+        trackColor  = MaterialTheme.colorScheme.surfaceContainerHigh,
+    )
+
+    // GB progress + network status row
+    Row(
+        modifier          = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment     = Alignment.CenterVertically,
+    ) {
+        Text(
+            text  = stringResource(
+                R.string.settings_ai_gb_progress,
+                "%.2f GB".format(downloadedGb),
+                "%.2f GB".format(totalGb),
+            ),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(
+            verticalAlignment     = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Icon(
+                imageVector        = if (onWifi) Icons.Filled.Wifi
+                                     else        Icons.Filled.SignalCellularAlt,
+                contentDescription = null,
+                tint               = if (onWifi) MaterialTheme.colorScheme.primary
+                                     else        MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier           = Modifier.size(14.dp),
+            )
+            Text(
+                text  = stringResource(
+                    if (onWifi) R.string.settings_ai_downloading_wifi
+                    else        R.string.settings_ai_downloading_cellular,
+                ),
+                style = MaterialTheme.typography.labelSmall,
+                color = if (onWifi) MaterialTheme.colorScheme.primary
+                        else        MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+
+    HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
+
+    // Pause + Cancel — both OutlinedButtons with icons
+    Row(
+        modifier              = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        OutlinedButton(
+            onClick  = onPause,
+            modifier = Modifier.weight(1f),
+            shape    = MaterialTheme.shapes.extraLarge,
+        ) {
+            Icon(
+                imageVector        = Icons.Filled.Pause,
+                contentDescription = null,
+                modifier           = Modifier.size(16.dp),
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(stringResource(R.string.settings_ai_action_pause))
+        }
+        OutlinedButton(
+            onClick  = onCancel,
+            modifier = Modifier.weight(1f),
+            shape    = MaterialTheme.shapes.extraLarge,
+            colors   = ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colorScheme.error,
+            ),
+            border   = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.38f)),
+        ) {
+            Icon(
+                imageVector        = Icons.Filled.Close,
+                contentDescription = null,
+                modifier           = Modifier.size(16.dp),
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(stringResource(R.string.settings_ai_action_cancel))
+        }
+    }
+}
+
+// ── Paused ────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun AiPausedSection(
+    state    : ModelState.Paused,
+    onResume : () -> Unit,
+    onCancel : () -> Unit,
+) {
+    val downloadedGb = state.downloadedBytes / 1_000_000_000.0
+    val totalGb      = if (state.totalBytes > 0) state.totalBytes / 1_000_000_000.0 else 2.60
+    val progress     = if (state.totalBytes > 0)
+        state.downloadedBytes.toFloat() / state.totalBytes else 0f
+    val pct          = (progress * 100).toInt()
+
+    // "Paused at 47%"
+    Row(
+        modifier          = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(
+            imageVector        = Icons.Filled.Pause,
+            contentDescription = null,
+            tint               = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier           = Modifier.size(18.dp),
+        )
+        Text(
+            text  = stringResource(R.string.settings_ai_paused_at_pct, pct),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+
+    // Partial progress bar
+    LinearProgressIndicator(
+        progress   = { progress },
+        modifier   = Modifier
+            .fillMaxWidth()
+            .height(8.dp)
+            .padding(horizontal = 20.dp)
+            .clip(MaterialTheme.shapes.extraSmall),
+        trackColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+    )
+
+    // GB progress + "Resume to continue" hint
+    Row(
+        modifier          = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment     = Alignment.CenterVertically,
+    ) {
+        Text(
+            text  = "%.2f GB of %.2f GB".format(downloadedGb, totalGb),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text  = stringResource(R.string.settings_ai_paused_resume_hint),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+
+    HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
+
+    // Resume (primary Button) + Cancel (error OutlinedButton)
+    Row(
+        modifier              = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Button(
+            onClick  = onResume,
+            modifier = Modifier.weight(1f),
+            shape    = MaterialTheme.shapes.extraLarge,
+        ) {
+            Icon(
+                imageVector        = Icons.Filled.PlayArrow,
+                contentDescription = null,
+                modifier           = Modifier.size(16.dp),
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(stringResource(R.string.settings_ai_action_resume))
+        }
+        OutlinedButton(
+            onClick  = onCancel,
+            modifier = Modifier.weight(1f),
+            shape    = MaterialTheme.shapes.extraLarge,
+            colors   = ButtonDefaults.outlinedButtonColors(
+                contentColor = MaterialTheme.colorScheme.error,
+            ),
+            border   = BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.38f)),
+        ) {
+            Icon(
+                imageVector        = Icons.Filled.Close,
+                contentDescription = null,
+                modifier           = Modifier.size(16.dp),
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(stringResource(R.string.settings_ai_action_cancel))
+        }
+    }
+}
+
+// ── Ready ─────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun AiReadySection(
+    state          : ModelState.Ready,
+    onTryAssistant : () -> Unit,
+    onDelete       : () -> Unit,
+) {
+    val sizeGb = state.sizeBytes / 1_000_000_000.0
+
+    // "Model ready · Gemma 3n 4B"
+    Row(
+        modifier          = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(
+            imageVector        = Icons.Filled.CheckCircle,
+            contentDescription = null,
+            tint               = MaterialTheme.colorScheme.primary,
+            modifier           = Modifier.size(18.dp),
+        )
+        Text(
+            text  = stringResource(R.string.settings_ai_ready_label),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+
+    HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
+
+    // Storage used row
+    AiStorageRow(
+        label = stringResource(R.string.settings_ai_storage_used_label),
+        value = "%.2f GB".format(sizeGb),
+    )
+
+    HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp))
+
+    // Action buttons
+    Row(
+        modifier              = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        FilledTonalButton(
+            onClick   = onTryAssistant,
+            modifier  = Modifier.weight(1.4f),
+            shape     = MaterialTheme.shapes.extraLarge,
+        ) {
+            Icon(
+                imageVector        = Icons.Filled.AutoAwesome,
+                contentDescription = null,
+                modifier           = Modifier.size(16.dp),
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(stringResource(R.string.settings_ai_try_assistant))
+        }
+        TextButton(
+            onClick  = onDelete,
+            modifier = Modifier.weight(1f),
+            colors   = ButtonDefaults.textButtonColors(
+                contentColor = MaterialTheme.colorScheme.error,
+            ),
+        ) {
+            Text(stringResource(R.string.settings_ai_action_delete))
+        }
+    }
+}
+
+// ── Error ─────────────────────────────────────────────────────────────────────
+
+@Composable
+private fun AiErrorSection(message: String, onDownload: () -> Unit) {
+    Text(
+        text     = stringResource(R.string.settings_ai_status_error, message),
+        style    = MaterialTheme.typography.bodySmall,
+        color    = MaterialTheme.colorScheme.error,
+        modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+    )
+    TextButton(
+        onClick  = onDownload,
+        modifier = Modifier.padding(horizontal = 12.dp),
+    ) {
+        Text(stringResource(R.string.settings_ai_action_download))
+    }
+    Spacer(modifier = Modifier.height(4.dp))
+}
+
+// ── Shared row ────────────────────────────────────────────────────────────────
+
+@Composable
+private fun AiStorageRow(label: String, value: String, hint: String? = null) {
+    Row(
+        modifier          = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(
+            imageVector        = Icons.Filled.Memory,
+            contentDescription = null,
+            tint               = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier           = Modifier.size(18.dp),
+        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = label, style = MaterialTheme.typography.bodySmall,
+                 color = MaterialTheme.colorScheme.onSurface)
+            if (hint != null) {
+                Text(text = hint, style = MaterialTheme.typography.labelSmall,
+                     color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        Text(
+            text  = value,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
+
+// ── Dialogs ───────────────────────────────────────────────────────────────────
+
+/** Shown when the user is on Wi-Fi — info-rich confirm dialog. */
+@Composable
+private fun WifiDownloadConfirmDialog(
+    onConfirm : () -> Unit,
+    onDismiss : () -> Unit,
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape          = MaterialTheme.shapes.extraLarge,
+            color          = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp,
+        ) {
+            Column(modifier = Modifier.padding(24.dp)) {
+                // Large circular primary icon — centered, mirrors the mobile data dialog's amber icon
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .size(72.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.primaryContainer,
+                            shape = CircleShape,
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector        = Icons.Filled.Download,
+                        contentDescription = null,
+                        tint               = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier           = Modifier.size(36.dp),
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text  = stringResource(R.string.settings_ai_download_dialog_title),
+                    style = MaterialTheme.typography.headlineSmall,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text  = stringResource(R.string.settings_ai_download_dialog_body),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Info rows
+                DialogInfoRow(
+                    icon  = Icons.Filled.Download,
+                    label = stringResource(R.string.settings_ai_download_size_label),
+                    value = stringResource(R.string.settings_ai_model_size),
+                )
+                DialogInfoRow(
+                    icon  = Icons.Filled.Memory,
+                    label = stringResource(R.string.settings_ai_dialog_storage_label),
+                    value = stringResource(R.string.settings_ai_dialog_storage_value),
+                )
+                DialogInfoRow(
+                    icon  = Icons.Filled.Timer,
+                    label = stringResource(R.string.settings_ai_dialog_time_label),
+                    value = stringResource(R.string.settings_ai_dialog_time_value),
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Wi-Fi recommendation callout
+                Surface(
+                    color    = MaterialTheme.colorScheme.primaryContainer,
+                    shape    = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        modifier              = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment     = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
+                        Icon(
+                            imageVector        = Icons.Filled.Wifi,
+                            contentDescription = null,
+                            tint               = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier           = Modifier.size(16.dp),
+                        )
                         Text(
-                            stringResource(R.string.settings_ai_download_dialog_wifi_warning),
-                            style    = MaterialTheme.typography.bodySmall,
-                            color    = MaterialTheme.colorScheme.onErrorContainer,
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            text  = stringResource(R.string.settings_ai_download_dialog_wifi_callout),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
                         )
                     }
                 }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                Row(
+                    modifier              = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment     = Alignment.CenterVertically,
+                ) {
+                    TextButton(onClick = onDismiss) {
+                        Text(stringResource(R.string.settings_ai_download_dialog_not_now))
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(onClick = onConfirm) {
+                        Icon(
+                            imageVector        = Icons.Filled.Download,
+                            contentDescription = null,
+                            modifier           = Modifier.size(16.dp),
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(stringResource(R.string.settings_ai_download_dialog_confirm))
+                    }
+                }
             }
-        },
+        }
+    }
+}
+
+/** Shown when the user is on mobile data — centered with large amber icon. */
+@Composable
+private fun MobileDataWarningDialog(
+    onWaitForWifi : () -> Unit,
+    onContinue    : () -> Unit,
+) {
+    Dialog(onDismissRequest = onWaitForWifi) {
+        Surface(
+            shape          = MaterialTheme.shapes.extraLarge,
+            color          = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp,
+        ) {
+            Column(
+                modifier            = Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                // Large circular amber/tertiary icon
+                Box(
+                    modifier = Modifier
+                        .size(72.dp)
+                        .background(
+                            color = MaterialTheme.colorScheme.tertiaryContainer,
+                            shape = CircleShape,
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector        = Icons.Filled.SignalCellularAlt,
+                        contentDescription = null,
+                        tint               = MaterialTheme.colorScheme.onTertiaryContainer,
+                        modifier           = Modifier.size(36.dp),
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text      = stringResource(R.string.settings_ai_mobile_title),
+                    style     = MaterialTheme.typography.headlineSmall,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text      = stringResource(R.string.settings_ai_mobile_body),
+                    style     = MaterialTheme.typography.bodyMedium,
+                    color     = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Amber chip — icon + two-line text (bold title + subtitle)
+                Surface(
+                    color    = MaterialTheme.colorScheme.tertiaryContainer,
+                    shape    = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        modifier              = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment     = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Icon(
+                            imageVector        = Icons.Filled.DataUsage,
+                            contentDescription = null,
+                            tint               = MaterialTheme.colorScheme.onTertiaryContainer,
+                            modifier           = Modifier.size(20.dp),
+                        )
+                        Column {
+                            Text(
+                                text  = stringResource(R.string.settings_ai_mobile_chip_title),
+                                style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.SemiBold),
+                                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                            )
+                            Text(
+                                text  = stringResource(R.string.settings_ai_mobile_chip_sub),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onTertiaryContainer,
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(20.dp))
+
+                // Primary action — stacked full-width buttons
+                Button(
+                    onClick  = onWaitForWifi,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape    = MaterialTheme.shapes.extraLarge,
+                ) {
+                    Icon(
+                        imageVector        = Icons.Filled.Wifi,
+                        contentDescription = null,
+                        modifier           = Modifier.size(16.dp),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(stringResource(R.string.settings_ai_mobile_wait_wifi))
+                }
+                Spacer(modifier = Modifier.height(4.dp))
+                OutlinedButton(
+                    onClick  = onContinue,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape    = MaterialTheme.shapes.extraLarge,
+                ) {
+                    Text(stringResource(R.string.settings_ai_mobile_continue))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DialogInfoRow(icon: ImageVector, label: String, value: String) {
+    Row(
+        modifier              = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 5.dp),
+        verticalAlignment     = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(
+            imageVector        = icon,
+            contentDescription = null,
+            tint               = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier           = Modifier.size(16.dp),
+        )
+        Text(
+            text     = label,
+            style    = MaterialTheme.typography.bodySmall,
+            color    = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text  = value,
+            style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+    }
+}
+
+@Composable
+private fun DeleteConfirmDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        title  = { Text(stringResource(R.string.settings_ai_delete_confirm_title)) },
+        text   = { Text(stringResource(R.string.settings_ai_delete_confirm_body)) },
         confirmButton = {
-            TextButton(onClick = onConfirm) {
-                Text(stringResource(R.string.settings_ai_download_dialog_confirm))
+            TextButton(
+                onClick = onConfirm,
+                colors  = ButtonDefaults.textButtonColors(
+                    contentColor = MaterialTheme.colorScheme.error,
+                ),
+            ) {
+                Text(stringResource(R.string.settings_ai_delete_confirm_yes))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.settings_ai_download_dialog_cancel))
+                Text(stringResource(R.string.form_cancel))
             }
         },
     )

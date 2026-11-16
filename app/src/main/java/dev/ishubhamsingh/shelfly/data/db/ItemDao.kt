@@ -54,6 +54,10 @@ interface ItemDao {
     @Update
     suspend fun update(item: Item)
 
+    /** Case-insensitive partial name search — active (non-consumed) items only. */
+    @Query("SELECT * FROM items WHERE consumed = 0 AND name LIKE '%' || :query || '%' ORDER BY name ASC")
+    suspend fun searchByName(query: String): List<Item>
+
     @Query("DELETE FROM items WHERE id = :id")
     suspend fun deleteById(id: String)
 }

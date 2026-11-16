@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
@@ -57,22 +58,38 @@ class GemmaModelManager @Inject constructor(
 
     fun refreshState() {
         scope.launch {
-            val file = resolveModelFile()
+            val file  = resolveModelFile()
+            val prefs = dataStore.data.first()
 
-            // A non-empty file that is smaller than the minimum expected size is a
-            // partial or corrupt download. Delete it now so it can never be mistaken
-            // for a valid model — loading it would crash the native LiteRT-LM layer.
-            if (file != null && file.exists() && file.length() in 1 until MIN_MODEL_SIZE_BYTES) {
-                file.delete()
-                dataStore.edit { prefs -> prefs.remove(DataStoreKeys.MODEL_FILE_PATH) }
-                _state.value = ModelState.NotDownloaded
-                return@launch
-            }
+            when {
+                // Complete model present
+                file != null && file.exists() && file.length() >= MIN_MODEL_SIZE_BYTES -> {
+                    // Clear any stale paused-download keys
+                    dataStore.edit { p ->
+                        p.remove(DataStoreKeys.PAUSED_DOWNLOADED_BYTES)
+                        p.remove(DataStoreKeys.PAUSED_TOTAL_BYTES)
+                    }
+                    _state.value = ModelState.Ready(file.absolutePath, file.length())
+                }
 
-            _state.value = if (file != null && file.exists() && file.length() >= MIN_MODEL_SIZE_BYTES) {
-                ModelState.Ready(file.absolutePath, file.length())
-            } else {
-                ModelState.NotDownloaded
+                // Partial file on disk — check whether it was an intentional pause
+                file != null && file.exists() && file.length() > 0 -> {
+                    val pausedDownloaded = prefs[DataStoreKeys.PAUSED_DOWNLOADED_BYTES]
+                    val pausedTotal      = prefs[DataStoreKeys.PAUSED_TOTAL_BYTES]
+                    if (pausedDownloaded != null && pausedDownloaded > 0L) {
+                        _state.value = ModelState.Paused(
+                            downloadedBytes = pausedDownloaded,
+                            totalBytes      = pausedTotal ?: 0L,
+                        )
+                    } else {
+                        // Orphaned partial file (crash / corrupt) — delete it
+                        file.delete()
+                        dataStore.edit { p -> p.remove(DataStoreKeys.MODEL_FILE_PATH) }
+                        _state.value = ModelState.NotDownloaded
+                    }
+                }
+
+                else -> _state.value = ModelState.NotDownloaded
             }
         }
     }
@@ -97,11 +114,78 @@ class GemmaModelManager @Inject constructor(
 
     fun cancelDownload() {
         workManager.cancelUniqueWork(ModelDownloadWorker.WORK_NAME)
-        // Clean up partial file
+        // Delete partial file and clear all download / paused state
         scope.launch {
             resolveModelFile()?.takeIf { it.exists() }?.delete()
+            dataStore.edit { prefs ->
+                prefs.remove(DataStoreKeys.PAUSED_DOWNLOADED_BYTES)
+                prefs.remove(DataStoreKeys.PAUSED_TOTAL_BYTES)
+            }
             _state.value = ModelState.NotDownloaded
         }
+    }
+
+    /**
+     * Stop the active download but keep the partial file on disk so that
+     * [resumeDownload] can continue from where it left off via HTTP Range.
+     */
+    fun pauseDownload() {
+        val current = _state.value
+        val downloaded = (current as? ModelState.Downloading)?.downloadedBytes ?: 0L
+        val total      = (current as? ModelState.Downloading)?.totalBytes      ?: 0L
+
+        // Set Paused BEFORE cancelling so the WorkManager CANCELLED event doesn't overwrite it
+        _state.value = ModelState.Paused(downloadedBytes = downloaded, totalBytes = total)
+
+        workManager.cancelUniqueWork(ModelDownloadWorker.WORK_NAME)
+
+        // Persist paused position — survives process death
+        scope.launch {
+            dataStore.edit { prefs ->
+                prefs[DataStoreKeys.PAUSED_DOWNLOADED_BYTES] = downloaded
+                prefs[DataStoreKeys.PAUSED_TOTAL_BYTES]      = total
+            }
+        }
+    }
+
+    /**
+     * Re-enqueue the download worker. Because the partial file is still on disk
+     * the worker will send a Range header and continue from [ModelState.Paused.downloadedBytes].
+     *
+     * IMPORTANT: we must transition out of [ModelState.Paused] BEFORE the worker starts
+     * emitting RUNNING events, otherwise the stale-RUNNING guard in [observeDownloadWorker]
+     * will drop every progress update and the UI stays frozen on the Paused screen.
+     */
+    fun resumeDownload() {
+        // Immediately move to Downloading so the RUNNING guard lets new events through
+        val paused = _state.value as? ModelState.Paused
+        _state.value = ModelState.Downloading(
+            progress       = if (paused != null && paused.totalBytes > 0)
+                                 paused.downloadedBytes.toFloat() / paused.totalBytes else 0f,
+            downloadedBytes = paused?.downloadedBytes ?: 0L,
+            totalBytes      = paused?.totalBytes      ?: 0L,
+        )
+
+        // Clear paused keys and re-enqueue with REPLACE so any lingering cancelled
+        // work record doesn't block the new request via KEEP policy
+        scope.launch {
+            dataStore.edit { prefs ->
+                prefs.remove(DataStoreKeys.PAUSED_DOWNLOADED_BYTES)
+                prefs.remove(DataStoreKeys.PAUSED_TOTAL_BYTES)
+            }
+        }
+        val request = OneTimeWorkRequestBuilder<ModelDownloadWorker>()
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+            )
+            .build()
+        workManager.enqueueUniqueWork(
+            ModelDownloadWorker.WORK_NAME,
+            ExistingWorkPolicy.REPLACE,
+            request,
+        )
     }
 
     fun delete() {
@@ -122,16 +206,35 @@ class GemmaModelManager @Inject constructor(
                 val info = infos.firstOrNull() ?: return@onEach
                 when (info.state) {
                     WorkInfo.State.RUNNING -> {
-                        val progress  = info.progress.getFloat(ModelDownloadWorker.KEY_PROGRESS, 0f)
+                        val progress   = info.progress.getFloat(ModelDownloadWorker.KEY_PROGRESS, 0f)
                         val downloaded = info.progress.getLong(ModelDownloadWorker.KEY_DOWNLOADED_BYTES, 0L)
                         val total      = info.progress.getLong(ModelDownloadWorker.KEY_TOTAL_BYTES, 0L)
-                        _state.value = ModelState.Downloading(progress, downloaded, total)
+                        // Use atomic update (CAS loop) so pauseDownload() can never be
+                        // overwritten by a stale RUNNING event even if they race on
+                        // different threads. Only advance to Downloading if we're currently
+                        // in a state that expects progress — Paused/Ready/Error are left alone.
+                        _state.update { current ->
+                            if (current is ModelState.Downloading || current is ModelState.NotDownloaded)
+                                ModelState.Downloading(progress, downloaded, total)
+                            else
+                                current
+                        }
                     }
                     WorkInfo.State.SUCCEEDED -> refreshState()
-                    WorkInfo.State.FAILED, WorkInfo.State.CANCELLED -> {
+                    WorkInfo.State.FAILED -> {
                         val msg = info.outputData.getString(ModelDownloadWorker.KEY_ERROR)
                             ?: "Download failed"
                         _state.value = ModelState.Error(msg)
+                    }
+                    WorkInfo.State.CANCELLED -> {
+                        // Atomic update: only reset to NotDownloaded if the worker was
+                        // system-killed while we were Downloading. Preserves Paused (set
+                        // by pauseDownload()) and NotDownloaded (set by cancelDownload())
+                        // even when CANCELLED races with either of those writes.
+                        _state.update { current ->
+                            if (current is ModelState.Downloading) ModelState.NotDownloaded
+                            else current
+                        }
                     }
                     else -> Unit
                 }

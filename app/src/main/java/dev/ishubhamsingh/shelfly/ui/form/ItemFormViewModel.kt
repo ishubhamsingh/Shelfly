@@ -8,6 +8,7 @@ import dev.ishubhamsingh.shelfly.data.repo.ItemRepository
 import dev.ishubhamsingh.shelfly.data.repo.SettingsRepository
 import dev.ishubhamsingh.shelfly.domain.model.Category
 import dev.ishubhamsingh.shelfly.domain.model.Item
+import dev.ishubhamsingh.shelfly.domain.model.ShelfUnits
 import dev.ishubhamsingh.shelfly.notifications.ImmediateNotifier
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 import java.time.Instant
 import java.time.LocalDate
 import java.util.UUID
@@ -43,7 +45,8 @@ class ItemFormViewModel @Inject constructor(
     private val notifier: ImmediateNotifier,
 ) : ViewModel() {
 
-    private val itemId: String? = savedStateHandle["itemId"]
+    private val itemId : String? = savedStateHandle["itemId"]
+    private val prefill: String? = savedStateHandle["prefill"]
 
     private val _state = MutableStateFlow(FormUiState())
     val state: StateFlow<FormUiState> = _state.asStateFlow()
@@ -69,10 +72,47 @@ class ItemFormViewModel @Inject constructor(
                     _state.update { it.copy(isLoading = false) }
                 }
             }
+        } else if (!prefill.isNullOrBlank()) {
+            // Pre-fill the form from AI-extracted data (Edit from ConfirmAdd card).
+            // prefill is a URL-decoded JSON string at this point (Navigation decodes it).
+            runCatching {
+                val json         = JSONObject(prefill!!)
+                val name         = json.optString("name").takeIf { it.isNotBlank() } ?: ""
+                val expiryDate   = json.optString("expiryDate").takeIf { it.isNotBlank() }
+                    ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+                val categoryEnum = json.optString("categoryEnum").takeIf { it.isNotBlank() }
+                val category     = categoryEnum?.let { runCatching { Category.valueOf(it) }.getOrNull() }
+                val amountStr    = json.optString("amount").takeIf { it.isNotBlank() }
+                val (qty, unit)  = parseAmountString(amountStr)
+                val notes        = json.optString("notes").takeIf { it.isNotBlank() } ?: ""
+                _state.update {
+                    it.copy(
+                        name       = name,
+                        category   = category,
+                        expiryDate = expiryDate,
+                        qty        = qty,
+                        unit       = unit,
+                        notes      = notes,
+                        isLoading  = false,
+                    )
+                }
+            }.onFailure {
+                _state.update { it.copy(isLoading = false) }
+            }
         } else {
             _state.update { it.copy(isLoading = false) }
         }
     }
+
+    /**
+     * Splits an amount string into (qty, canonical unit) via [ShelfUnits].
+     *
+     * Shared with the agent so an extracted unit always maps onto a form chip. The old
+     * local version split on a space and kept whatever followed verbatim, so "330ml"
+     * became the qty "330ml" with no unit, and "1 can" set a unit no chip could show.
+     */
+    private fun parseAmountString(raw: String?): Pair<String, String?> =
+        ShelfUnits.splitAmount(raw)
 
     fun setName(value: String)           = _state.update { it.copy(name = value) }
     fun setCategory(value: Category)     = _state.update { it.copy(category = value) }

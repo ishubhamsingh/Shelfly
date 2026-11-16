@@ -44,10 +44,10 @@ class ModelDownloadWorker @AssistedInject constructor(
             .build()
     }
 
-    override suspend fun getForegroundInfo(): ForegroundInfo = buildForegroundInfo(0f, 0L, 0L)
+    override suspend fun getForegroundInfo(): ForegroundInfo = buildForegroundInfo(0f, 0L, 0L, -1L)
 
     override suspend fun doWork(): Result = withContext(Dispatchers.IO) {
-        setForeground(buildForegroundInfo(0f, 0L, 0L))
+        setForeground(buildForegroundInfo(0f, 0L, 0L, -1L))
 
         val prefs = dataStore.data.first()
         val url = prefs[DataStoreKeys.MODEL_DOWNLOAD_URL]
@@ -63,7 +63,13 @@ class ModelDownloadWorker @AssistedInject constructor(
             downloadWithResume(url, destFile)
             dataStore.edit { it[DataStoreKeys.MODEL_FILE_PATH] = destFile.absolutePath }
             Result.success()
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            // Worker was cancelled by pause or cancel action. Keep the partial file on
+            // disk so a subsequent resume can continue via HTTP Range. Rethrow so
+            // WorkManager marks the work as CANCELLED rather than FAILED.
+            throw e
         } catch (e: Exception) {
+            // Genuine download error — partial file may be corrupt, remove it.
             destFile.delete()
             Result.failure(errorData(e.message ?: "Unknown error"))
         }
@@ -91,9 +97,12 @@ class ModelDownloadWorker @AssistedInject constructor(
         body.byteStream().use { input ->
             (if (append) dest.appendingOutputStream() else dest.outputStream()).use { out ->
                 val buffer = ByteArray(512 * 1024) // 512 KB — much faster for large files
-                var downloaded = existingBytes
-                var read: Int
-                var lastNotifMs = 0L  // throttle setForeground() — it's a heavy IPC call
+                var downloaded    = existingBytes
+                var read          : Int
+                var lastNotifMs   = 0L   // throttle setForeground() — it's a heavy IPC call
+                var lastSpeedBytes = existingBytes
+                var lastSpeedMs    = 0L
+                var remainingSecs  = -1L
 
                 while (input.read(buffer).also { read = it } != -1) {
                     out.write(buffer, 0, read)
@@ -103,15 +112,26 @@ class ModelDownloadWorker @AssistedInject constructor(
                         val progress = downloaded.toFloat() / totalBytes
                         // Always update WorkManager state (cheap, in-process)
                         setProgress(workDataOf(
-                            KEY_PROGRESS to progress,
+                            KEY_PROGRESS        to progress,
                             KEY_DOWNLOADED_BYTES to downloaded,
-                            KEY_TOTAL_BYTES to totalBytes,
+                            KEY_TOTAL_BYTES      to totalBytes,
                         ))
                         // Throttle notification IPC to once every 2 s — avoids flooding
                         // ActivityManager/NotificationManager and triggering watchdog reboots.
                         val now = System.currentTimeMillis()
                         if (now - lastNotifMs >= 2_000L) {
-                            setForeground(buildForegroundInfo(progress, downloaded, totalBytes))
+                            // Estimate time remaining from bytes-per-ms over the last interval
+                            val elapsedMs = now - lastSpeedMs
+                            if (lastSpeedMs > 0 && elapsedMs > 0) {
+                                val bytesPerMs = (downloaded - lastSpeedBytes).toFloat() / elapsedMs
+                                if (bytesPerMs > 0) {
+                                    remainingSecs = ((totalBytes - downloaded) / bytesPerMs / 1000).toLong()
+                                }
+                            }
+                            lastSpeedBytes = downloaded
+                            lastSpeedMs    = now
+
+                            setForeground(buildForegroundInfo(progress, downloaded, totalBytes, remainingSecs))
                             lastNotifMs = now
                         }
                     }
@@ -125,20 +145,39 @@ class ModelDownloadWorker @AssistedInject constructor(
         }
     }
 
-    private fun buildForegroundInfo(progress: Float, downloadedBytes: Long, totalBytes: Long): ForegroundInfo {
+    private fun buildForegroundInfo(
+        progress       : Float,
+        downloadedBytes: Long,
+        totalBytes     : Long,
+        remainingSecs  : Long = -1L,
+    ): ForegroundInfo {
         ensureDownloadChannel()
+
+        fun fmtGb(bytes: Long) = "%.2f GB".format(bytes / 1_000_000_000.0)
+
         val contentText = when {
-            progress <= 0f -> appContext.getString(R.string.model_download_notif_starting)
-            totalBytes > 0 -> appContext.getString(
-                R.string.model_download_notif_progress,
-                downloadedBytes / (1024 * 1024),
-                totalBytes / (1024 * 1024),
-                (progress * 100).toInt(),
-            )
+            progress <= 0f  -> appContext.getString(R.string.model_download_notif_starting)
+            totalBytes > 0  -> {
+                val dlGb  = fmtGb(downloadedBytes)
+                val totGb = fmtGb(totalBytes)
+                if (remainingSecs > 0) {
+                    val timeStr = if (remainingSecs < 60)
+                        appContext.getString(R.string.model_download_notif_sec_remaining, remainingSecs.toInt())
+                    else
+                        appContext.getString(R.string.model_download_notif_min_remaining, (remainingSecs / 60).toInt())
+                    appContext.getString(R.string.model_download_notif_gb_remaining, dlGb, totGb, timeStr)
+                } else {
+                    appContext.getString(
+                        R.string.model_download_notif_gb_progress,
+                        dlGb, totGb, (progress * 100).toInt(),
+                    )
+                }
+            }
             else -> appContext.getString(R.string.model_download_notif_progress_pct, (progress * 100).toInt())
         }
+
         val notification = NotificationCompat.Builder(appContext, DOWNLOAD_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_launcher_monochrome)
             .setContentTitle(appContext.getString(R.string.model_download_notif_title))
             .setContentText(contentText)
             .setProgress(100, (progress * 100).toInt(), progress == 0f)

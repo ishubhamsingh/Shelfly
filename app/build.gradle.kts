@@ -101,6 +101,12 @@ dependencies {
     // MediaPipe Tasks GenAI — debug spike only
     debugImplementation(libs.mediapipe.tasks.genai)
 
+    // ML Kit GenAI Prompt API — Gemini Nano via the AICore system service
+    implementation(libs.mlkit.genai.prompt)
+
+    // ML Kit Text Recognition — locates text so label photos can be tiled
+    implementation(libs.mlkit.text.recognition)
+
     // LiteRT-LM — on-device LLM inference (main agent)
     implementation(libs.litertlm.android)
 

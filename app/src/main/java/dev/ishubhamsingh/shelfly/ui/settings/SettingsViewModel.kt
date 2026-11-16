@@ -9,6 +9,8 @@ import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import dev.ishubhamsingh.shelfly.agent.AiCoreManager
+import dev.ishubhamsingh.shelfly.agent.AiCoreState
 import dev.ishubhamsingh.shelfly.agent.GemmaModelManager
 import dev.ishubhamsingh.shelfly.agent.ModelState
 import dev.ishubhamsingh.shelfly.data.repo.SettingsRepository
@@ -30,6 +32,7 @@ class SettingsViewModel @Inject constructor(
     private val settingsRepo: SettingsRepository,
     private val notifier: ImmediateNotifier,
     private val modelManager: GemmaModelManager,
+    private val aiCoreManager: AiCoreManager,
     @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
 
@@ -46,6 +49,12 @@ class SettingsViewModel @Inject constructor(
         scope        = viewModelScope,
         started      = SharingStarted.WhileSubscribed(5_000),
         initialValue = ModelState.NotDownloaded,
+    )
+
+    val aiCoreState: StateFlow<AiCoreState> = aiCoreManager.state.stateIn(
+        scope        = viewModelScope,
+        started      = SharingStarted.WhileSubscribed(5_000),
+        initialValue = AiCoreState.Unknown,
     )
 
     init { checkWorkerStatus() }
@@ -87,7 +96,19 @@ class SettingsViewModel @Inject constructor(
 
     // ── Gemma model ────────────────────────────────────────────────────────────
 
+    // ── Gemini Nano (AICore) ───────────────────────────────────────────────────
+
+    /**
+     * Asks the system to fetch Nano. Costs the user no app-side download — the model is
+     * system-managed and shared across apps, so this replaces the ~2.6 GB Gemma pull on
+     * capable devices.
+     */
+    fun enableAiCore()   = aiCoreManager.startDownload()
+    fun refreshAiCore()  = aiCoreManager.refresh()
+
     fun downloadModel(url: String) = modelManager.startDownload(url)
+    fun pauseModelDownload()       = modelManager.pauseDownload()
+    fun resumeModelDownload()      = modelManager.resumeDownload()
     fun cancelModelDownload()      = modelManager.cancelDownload()
     fun deleteModel()              = modelManager.delete()
 

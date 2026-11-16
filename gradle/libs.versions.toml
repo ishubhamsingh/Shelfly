@@ -14,6 +14,8 @@ workManager           = "2.9.1"
 datastore             = "1.1.1"
 appfunctions          = "1.0.0-alpha08"
 mediapipeTasksGenai   = "0.10.27"
+mlkitGenaiPrompt      = "1.0.0-beta4"
+mlkitTextRecognition  = "16.0.1"
 litertlm              = "0.11.0"
 okhttp                = "4.12.0"
 
@@ -62,6 +64,13 @@ appfunctions-compiler = { group = "androidx.appfunctions", name = "appfunctions-
 
 # MediaPipe Tasks GenAI (debug spike only)
 mediapipe-tasks-genai = { group = "com.google.mediapipe", name = "tasks-genai", version.ref = "mediapipeTasksGenai" }
+
+# ML Kit GenAI Prompt API — Gemini Nano via AICore (debug spike only)
+mlkit-genai-prompt    = { group = "com.google.mlkit", name = "genai-prompt", version.ref = "mlkitGenaiPrompt" }
+
+# ML Kit Text Recognition — used as a text LOCATOR (bounding boxes) for image tiling,
+# not as the OCR engine. Bundled model, fully on-device, no network.
+mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition", version.ref = "mlkitTextRecognition" }
 
 # LiteRT-LM (on-device LLM inference — main agent)
 litertlm-android = { group = "com.google.ai.edge.litertlm", name = "litertlm-android", version.ref = "litertlm" }

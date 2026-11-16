@@ -10,5 +10,9 @@
             android:name=".spike.SpikeActivity"
             android:exported="true"
             android:label="Gemma Spike" />
+        <activity
+            android:name=".spike.eval.EvalActivity"
+            android:exported="true"
+            android:label="Backend Eval" />
     </application>
 </manifest>

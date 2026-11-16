@@ -65,6 +65,7 @@
     <string name="status_looking_good">Looking good</string>
 
     <!-- Item detail -->
+    <string name="detail_label_expiry">Expiry</string>
     <string name="detail_label_category">Category</string>
     <string name="detail_label_quantity">Quantity</string>
     <string name="detail_label_added">Added</string>
@@ -90,6 +91,10 @@
     <string name="sheet_add_manually">Add manually</string>
     <string name="sheet_add_manually_subtitle">Type the details in a form</string>
     <string name="sheet_no_assistant_hint">Set a default assistant in your device settings to use this feature</string>
+    <string name="sheet_ai_downloading">%1$d%% · Downloading AI model</string>
+    <string name="sheet_ai_paused">Paused at %1$d%%</string>
+    <string name="sheet_ai_download_hint">Download the AI model in Settings to use this feature</string>
+    <string name="sheet_ai_get">Get</string>
 
     <!-- Agent sheet -->
     <string name="agent_sheet_title">Ask Shelfly</string>
@@ -105,6 +110,45 @@
     <string name="agent_image_clear">Remove image</string>
     <string name="agent_image_camera">Take photo</string>
     <string name="agent_image_gallery">Choose from gallery</string>
+
+    <!-- Agent confirm / result cards (Phase 5) -->
+    <string name="agent_confirm_add_heading">Here\'s what I found</string>
+    <string name="agent_confirm_add_subtitle">Confirm to add, or tap a field to edit</string>
+    <string name="agent_confirm_discard">Discard</string>
+    <string name="agent_confirm_edit">Edit</string>
+    <string name="agent_confirm_field_check">\? Check</string>
+    <string name="agent_confirm_expiry_today">Expires today</string>
+    <string name="agent_confirm_expiry_tomorrow">Expires tomorrow</string>
+    <string name="agent_confirm_expiry_in_days">Expires %1$s · %2$d days left</string>
+    <string name="agent_confirm_expiry_past">Already expired</string>
+    <string name="agent_confirm_delete_title">Delete this item?</string>
+    <string name="agent_confirm_delete_title_named">Delete \'%1$s\'?</string>
+    <string name="agent_confirm_delete_body">This will permanently remove the item from your shelf.</string>
+    <string name="agent_confirm_consumed_title">Mark as consumed?</string>
+    <string name="agent_confirm_consumed_title_named">Mark \'%1$s\' as consumed?</string>
+    <string name="agent_confirm_consumed_body">This will mark the item as consumed and remove it from your active shelf.</string>
+    <string name="agent_confirm_destruct_confirm">Confirm</string>
+
+    <!-- Agent full-screen redesign -->
+    <string name="agent_title">Assistant</string>
+    <string name="agent_private_subtitle">On-device · private</string>
+    <string name="agent_idle_heading">What would you like to add to your shelf?</string>
+    <string name="agent_composer_hint">Ask anything…</string>
+    <string name="agent_idle_body">Type, speak, or share a photo of a label. I\'ll extract the details.</string>
+    <string name="agent_try_saying">Try saying</string>
+    <string name="agent_thinking_heading">Working on it</string>
+    <string name="agent_you_said">You said</string>
+    <string name="agent_failure_heading">I\'m a bit stuck</string>
+    <string name="agent_failure_body">Here are a few things that might help:</string>
+    <string name="agent_failure_tip_name">Be more specific about the item name</string>
+    <string name="agent_failure_tip_expiry">Mention an expiry date or duration</string>
+    <string name="agent_failure_tip_photo">Try attaching a photo of the label</string>
+    <string name="agent_add_manually">Add manually</string>
+    <string name="agent_try_again">Try again</string>
+    <string name="agent_pill_text">Text</string>
+    <string name="agent_pill_voice">Voice</string>
+    <string name="agent_pill_camera">Camera</string>
+    <string name="agent_pill_gallery">Gallery</string>
 
     <!-- Rotating assistant prompts -->
     <string-array name="assistant_prompts">
@@ -195,27 +239,89 @@
     <string name="cd_add_item">Add item</string>
     <string name="cd_more_options">More options</string>
 
-    <!-- AI Scanning / Gemma model -->
-    <string name="settings_ai_header">AI Scanning (experimental)</string>
-    <string name="settings_ai_status_not_downloaded">Not downloaded</string>
-    <string name="settings_ai_status_not_downloaded_sub">Download the on-device model to use AI scanning without Gemini.</string>
-    <string name="settings_ai_status_downloading">Downloading… %1$d%%</string>
-    <string name="settings_ai_status_ready">Ready</string>
+    <!-- AI Assistant settings card -->
+    <string name="settings_ai_header">AI Assistant</string>
+    <string name="settings_ai_experimental_badge">Experimental</string>
+    <string name="settings_ai_idle_desc">Add items by typing, speaking, or sharing a photo. Runs entirely on your device — your data never leaves the phone.</string>
+    <string name="settings_ai_privacy_callout">On-device · works offline · no data shared</string>
+    <string name="settings_ai_model_size_label">Model size</string>
+    <string name="settings_ai_model_size">2.60 GB</string>
+    <string name="settings_ai_wifi_hint">Wi-Fi recommended</string>
+    <string name="settings_ai_download_cta">Download model · 2.6 GB</string>
+    <string name="settings_ai_downloading_label">%1$d%% downloaded</string>
+    <string name="settings_ai_gb_progress">%1$s of %2$s</string>
+    <!-- Must match GemmaModelManager.MODEL_DOWNLOAD_URL (gemma-4-E2B-it). -->
+    <string name="settings_ai_ready_label">Model ready · Gemma 4 E2B</string>
+    <string name="settings_ai_storage_used_label">Storage used</string>
+    <string name="settings_ai_try_assistant">Try the assistant</string>
+
+    <!-- Shown when the model could not read an expiry date and honestly omitted it. -->
+    <string name="agent_expiry_not_found">Couldn\'t read it — tap to set</string>
+    <string name="agent_expiry_add_date">Needs a date</string>
+    <string name="agent_expiry_set_cta">Set date</string>
+
+    <!-- Gemini Nano via AICore — preferred where supported (no app-side download) -->
+    <string name="settings_aicore_ready_title">Ready — using Gemini Nano</string>
+    <string name="settings_aicore_ready_body">Runs on your device\'s AI chip. Kept up to date by Android, with nothing to download.</string>
+    <string name="settings_aicore_offer_title">Turn on the assistant</string>
+    <string name="settings_aicore_offer_body">This device supports Gemini Nano, so the assistant works without downloading a 2.6 GB model. Android fetches it once and shares it with other apps.</string>
+    <string name="settings_aicore_enable_cta">Turn on — no download</string>
+    <string name="settings_aicore_download_instead">Download the 2.6 GB model instead</string>
+    <string name="settings_aicore_enabling_title">Setting up Gemini Nano…</string>
+    <string name="settings_aicore_enabling_body">Android is fetching the model. This usually takes a few minutes, and you can leave this screen.</string>
+
+    <string name="settings_ai_delete_confirm_title">Delete AI model?</string>
+    <string name="settings_ai_delete_confirm_body">The on-device model will be removed. You can re-download it at any time from Settings.</string>
+    <string name="settings_ai_delete_confirm_yes">Delete</string>
+    <!-- kept for ViewModel / error strings -->
     <string name="settings_ai_status_error">Error: %1$s</string>
     <string name="settings_ai_action_download">Download</string>
     <string name="settings_ai_action_cancel">Cancel</string>
     <string name="settings_ai_action_delete">Delete</string>
-    <string name="settings_ai_size_mb">%1$d MB</string>
+    <!-- Download notification -->
     <string name="model_download_notif_title">Downloading AI model</string>
     <string name="model_download_notif_progress">%1$d MB / %2$d MB (%3$d%%)</string>
     <string name="model_download_notif_progress_pct">%1$d%% complete</string>
     <string name="model_download_notif_starting">Starting download…</string>
     <string name="model_download_channel_name">AI Model Download</string>
-    <string name="settings_ai_download_dialog_title">Download AI model (~2.6 GB)?</string>
-    <string name="settings_ai_download_dialog_body">The on-device AI model is about 2.6 GB. It will be stored on your device and can be deleted at any time from Settings.</string>
-    <string name="settings_ai_download_dialog_wifi_warning">You\'re not on Wi-Fi. Downloading on mobile data may incur charges.</string>
+    <string name="model_download_notif_gb_progress">%1$s of %2$s · %3$d%%</string>
+    <string name="model_download_notif_gb_remaining">%1$s of %2$s · ~ %3$s remaining</string>
+    <string name="model_download_notif_min_remaining">%d min</string>
+    <string name="model_download_notif_sec_remaining">%d sec</string>
+    <!-- Download confirm dialog (Wi-Fi path) -->
+    <string name="settings_ai_download_dialog_title">Download the AI model?</string>
+    <string name="settings_ai_download_dialog_body">The model runs locally on your device — your data never leaves the phone.</string>
     <string name="settings_ai_download_dialog_confirm">Download</string>
-    <string name="settings_ai_download_dialog_cancel">Cancel</string>
-    <string name="settings_ai_progress_bytes">%1$d MB / %2$d MB (%3$d%%)</string>
-    <string name="settings_ai_progress_pct">%1$d%%</string>
+    <string name="settings_ai_download_dialog_not_now">Not now</string>
+    <string name="settings_ai_download_size_label">Download size</string>
+
+    <!-- Mobile-data warning dialog -->
+    <string name="settings_ai_mobile_title">Use mobile data?</string>
+    <string name="settings_ai_mobile_body">You\'re not on Wi-Fi. Downloading the AI model will use approximately 2.6 GB of cellular data.</string>
+    <string name="settings_ai_mobile_chip">2.6 GB on cellular · Carrier charges may apply</string>
+    <string name="settings_ai_mobile_chip_title">2.6 GB on cellular</string>
+    <string name="settings_ai_mobile_chip_sub">Carrier charges may apply</string>
+    <string name="settings_ai_mobile_wifi_hint">Wi-Fi is recommended. You can cancel the download at any time from Settings.</string>
+    <string name="settings_ai_mobile_wait_wifi">Wait for Wi-Fi</string>
+    <string name="settings_ai_mobile_continue">Continue on mobile data</string>
+
+    <!-- Downloading state labels -->
+    <string name="settings_ai_downloading_pct">%1$d%%</string>
+    <string name="settings_ai_downloading_suffix">downloaded</string>
+    <string name="settings_ai_downloading_wifi">Downloading over Wi-Fi</string>
+    <string name="settings_ai_downloading_cellular">Downloading over mobile data</string>
+    <string name="settings_ai_action_pause">Pause</string>
+
+    <!-- Paused state labels -->
+    <string name="settings_ai_paused_at_pct">Paused at %1$d%%</string>
+    <string name="settings_ai_paused_resume_hint">Resume to continue</string>
+    <string name="settings_ai_paused_progress">%1$s of %2$s saved · tap Resume to continue</string>
+    <string name="settings_ai_action_resume">Resume</string>
+
+    <!-- Download confirm dialog rows -->
+    <string name="settings_ai_dialog_storage_label">Storage needed</string>
+    <string name="settings_ai_dialog_storage_value">2.6 GB free</string>
+    <string name="settings_ai_dialog_time_label">Estimated time</string>
+    <string name="settings_ai_dialog_time_value">~ 8 min on Wi-Fi</string>
+    <string name="settings_ai_download_dialog_wifi_callout">Wi-Fi is recommended. You can pause and resume the download anytime.</string>
 </resources>

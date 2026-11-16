@@ -26,11 +26,19 @@ class AgentToolCatalog @Inject constructor(
 
     // ── Dispatcher ────────────────────────────────────────────────────────────
 
+    /**
+     * Resolves a user-supplied name string to the actual DB item name (first match).
+     * Returns null if no matching item is found. Used to show the real name in
+     * destructive-action confirmation cards before execution.
+     */
+    suspend fun lookupItemName(query: String): String? =
+        appFunctions.findByName(query).firstOrNull()?.name
+
     suspend fun execute(name: String, args: JSONObject): JSONObject {
         return try {
             when (name) {
                 "addItem" -> {
-                    val expiryDate = parseExpiryIn(args.getString("expiryIn")).toString()
+                    val expiryDate = resolveExpiry(args)
                     val (qty, unit) = parseAmount(args.optStringOrNull("amount"))
                     val result = appFunctions.addItem(
                         appFunctionContext = appFunctionContext,
@@ -138,6 +146,42 @@ class AgentToolCatalog @Inject constructor(
                     JSONObject().apply { put("ok", ok) }
                 }
 
+                "markConsumedByName" -> {
+                    val name    = args.getString("name")
+                    val matches = appFunctions.findByName(name)
+                    if (matches.isEmpty()) {
+                        JSONObject().apply {
+                            put("ok", false)
+                            put("error", "No item named \"$name\" found on your shelf")
+                        }
+                    } else {
+                        val item = matches.first()
+                        val ok   = appFunctions.markConsumed(appFunctionContext, item.id)
+                        JSONObject().apply {
+                            put("ok", ok)
+                            if (ok) put("item", item.toJson())
+                        }
+                    }
+                }
+
+                "deleteItemByName" -> {
+                    val name    = args.getString("name")
+                    val matches = appFunctions.findByName(name)
+                    if (matches.isEmpty()) {
+                        JSONObject().apply {
+                            put("ok", false)
+                            put("error", "No item named \"$name\" found on your shelf")
+                        }
+                    } else {
+                        val item = matches.first()
+                        val ok   = appFunctions.deleteItem(appFunctionContext, item.id)
+                        JSONObject().apply {
+                            put("ok", ok)
+                            if (ok) put("deletedName", item.name)
+                        }
+                    }
+                }
+
                 else -> JSONObject().apply {
                     put("ok", false)
                     put("error", "Unknown function: $name")
@@ -158,6 +202,26 @@ class AgentToolCatalog @Inject constructor(
      * "1.5 years") into an absolute LocalDate relative to today.
      * Also accepts an ISO-8601 date directly if the model produced one.
      */
+    /**
+     * Resolves the expiry for addItem, preferring an absolute date over a duration.
+     *
+     * Measured (Gemma 4 E2B, real can photos, Edge Gallery): asking for a DURATION made
+     * the model estimate rather than read — a can printed "EXP 19/10/26" came back as
+     * "3 months" (28 days late). Asking for the printed date returned 2026-10-19 exactly.
+     *
+     * Both keys stay supported: typed input ("milk in 10 days") is naturally a duration,
+     * label scans are naturally a date. Falling back to expiryIn also keeps older
+     * behaviour working if the model omits expiryDate.
+     */
+    private fun resolveExpiry(args: JSONObject): String {
+        args.optStringOrNull("expiryDate")?.let { raw ->
+            runCatching { LocalDate.parse(raw.trim()).toString() }
+                .getOrNull()
+                ?.let { return it }
+        }
+        return parseExpiryIn(args.getString("expiryIn")).toString()
+    }
+
     private fun parseExpiryIn(raw: String): LocalDate {
         val today = LocalDate.now()
         val s = raw.trim().lowercase()
@@ -236,17 +300,13 @@ class AgentToolCatalog @Inject constructor(
         return Pair(null, null)
     }
 
-    private fun normalizeUnit(raw: String): String = when (raw.trim().lowercase()) {
-        "tab", "tabs", "tablet"                            -> "tablets"
-        "pc", "pcs", "piece", "unit", "units"             -> "pieces"
-        "l", "litre", "litres", "liter", "liters"         -> "L"
-        "milliliter", "milliliters",
-        "millilitre", "millilitres", "mililiter"          -> "ml"
-        "milligram", "milligrams"                         -> "mg"
-        "gram", "grams"                                   -> "g"
-        "kilogram", "kilograms", "kilo", "kilos"          -> "kg"
-        else                                              -> raw
-    }
+    /**
+     * Delegates to [ShelfUnits] so the agent and the form's chip row cannot drift.
+     * Falls back to the raw string only when nothing maps, which the form then shows
+     * as no chip selected rather than inventing one.
+     */
+    private fun normalizeUnit(raw: String): String =
+        dev.ishubhamsingh.shelfly.domain.model.ShelfUnits.normalize(raw) ?: raw
 }
 
 // ── Tool definitions JSON ─────────────────────────────────────────────────────
@@ -356,6 +416,28 @@ private val TOOL_DEFINITIONS_JSON = """
         "id": { "type": "string", "description": "UUID of the item to delete." }
       },
       "required": ["id"]
+    }
+  },
+  {
+    "name": "markConsumedByName",
+    "description": "Find an item by name and mark it as consumed. Use this when the user refers to an item by name.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Name of the item as the user stated it." }
+      },
+      "required": ["name"]
+    }
+  },
+  {
+    "name": "deleteItemByName",
+    "description": "Find an item by name and permanently delete it from the shelf. Use this when the user refers to an item by name.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Name of the item as the user stated it." }
+      },
+      "required": ["name"]
     }
   }
 ]

@@ -43,9 +43,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -61,6 +63,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.ishubhamsingh.shelfly.R
+import dev.ishubhamsingh.shelfly.agent.AiCoreState
 import dev.ishubhamsingh.shelfly.agent.ModelState
 import dev.ishubhamsingh.shelfly.domain.model.Category
 import dev.ishubhamsingh.shelfly.domain.model.Item
@@ -70,6 +73,8 @@ import dev.ishubhamsingh.shelfly.domain.util.formattedQty
 import dev.ishubhamsingh.shelfly.domain.util.statusFor
 import dev.ishubhamsingh.shelfly.ui.agent.AgentSheet
 import dev.ishubhamsingh.shelfly.ui.agent.AgentViewModel
+import dev.ishubhamsingh.shelfly.ui.agent.PendingItem
+import dev.ishubhamsingh.shelfly.ui.agent.toPrefillJson
 import dev.ishubhamsingh.shelfly.ui.components.AddOptionsSheet
 import dev.ishubhamsingh.shelfly.ui.components.CategoryAvatar
 import dev.ishubhamsingh.shelfly.ui.components.ShelfIllustration
@@ -82,35 +87,46 @@ import dev.ishubhamsingh.shelfly.ui.theme.LocalShelflyStatusColors
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onNavigateToForm: () -> Unit,
+    onNavigateToForm: (prefill: String?) -> Unit,
     onNavigateToDetail: (String) -> Unit,
     onNavigateToSettings: () -> Unit,
+    /** True when the edit form saved an item; drives teardown of the agent sheet. */
+    itemSavedFromForm: Boolean = false,
+    onItemSavedHandled: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
     agentViewModel: AgentViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val modelState by agentViewModel.modelState.collectAsStateWithLifecycle()
+    val aiCoreReady by agentViewModel.aiCoreState.collectAsStateWithLifecycle()
     val isCapable    = rememberIsAppFunctionsCapable()
     val hasAssistant = rememberHasAssistant()
     val modelIsReady = modelState is ModelState.Ready
     var showAddSheet    by remember { mutableStateOf(false) }
     var showFilterSheet by remember { mutableStateOf(false) }
-    var showAgentSheet  by remember { mutableStateOf(false) }
+    // rememberSaveable: survives NavHost's compose/decompose cycle so that navigating
+    // to the Edit form and pressing Back restores the AgentSheet with ConfirmAdd intact.
+    var showAgentSheet  by rememberSaveable { mutableStateOf(false) }
+
+    // The item was saved from the edit form, so the agent's pending confirm card is now
+    // stale — leaving it up made users think the save failed and add the item again.
+    LaunchedEffect(itemSavedFromForm) {
+        if (itemSavedFromForm) {
+            showAgentSheet = false
+            agentViewModel.reset()
+            onItemSavedHandled()
+        }
+    }
 
     if (showAddSheet) {
         AddOptionsSheet(
-            onDismiss    = { showAddSheet = false },
-            onAddManually = onNavigateToForm,
-            modelIsReady  = modelIsReady,
-            hasAssistant  = hasAssistant,
-            onAskAgent    = { showAgentSheet = true },
-        )
-    }
-
-    if (showAgentSheet) {
-        AgentSheet(
-            onDismiss  = { showAgentSheet = false },
-            viewModel  = agentViewModel,
+            onDismiss           = { showAddSheet = false },
+            onAddManually       = { onNavigateToForm(null) },
+            modelState          = modelState,
+            aiCoreReady         = aiCoreReady is AiCoreState.Ready,
+            hasAssistant        = hasAssistant,
+            onAskAgent          = { agentViewModel.reset(); showAgentSheet = true },
+            onNavigateToSettings = { showAddSheet = false; onNavigateToSettings() },
         )
     }
 
@@ -131,42 +147,63 @@ fun HomeScreen(
         )
     }
 
-    Scaffold(
-        topBar = {
-            HomeTopBar(
-                itemCount       = state.items.size,
-                sort            = state.sort,
-                categoryFilter  = state.categoryFilter,
-                onFilterClick   = { showFilterSheet = true },
-                onSettingsClick = onNavigateToSettings,
-            )
-        },
-        floatingActionButton = {
-            ExtendedFloatingActionButton(
-                onClick        = { if (isCapable || modelIsReady) showAddSheet = true else onNavigateToForm() },
-                icon           = { Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.cd_add_item)) },
-                text           = { Text(stringResource(R.string.form_add_cta)) },
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor   = MaterialTheme.colorScheme.onPrimaryContainer,
-            )
-        },
-    ) { innerPadding ->
-        Column(modifier = Modifier.padding(innerPadding)) {
-            FilterRow(
-                selected = state.filter,
-                onSelect = viewModel::setFilter,
-            )
-            if (state.isLoading) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-            } else if (state.items.isEmpty()) {
-                EmptyState(modifier = Modifier.fillMaxSize())
-            } else {
-                ItemList(
-                    items       = state.items,
-                    settings    = state.settings,
-                    onItemClick = onNavigateToDetail,
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            topBar = {
+                HomeTopBar(
+                    itemCount       = state.items.size,
+                    sort            = state.sort,
+                    categoryFilter  = state.categoryFilter,
+                    onFilterClick   = { showFilterSheet = true },
+                    onSettingsClick = onNavigateToSettings,
                 )
+            },
+            floatingActionButton = {
+                ExtendedFloatingActionButton(
+                    onClick        = { if (isCapable || modelIsReady) showAddSheet = true else onNavigateToForm(null) },
+                    icon           = { Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.cd_add_item)) },
+                    text           = { Text(stringResource(R.string.form_add_cta)) },
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor   = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            },
+        ) { innerPadding ->
+            Column(modifier = Modifier.padding(innerPadding)) {
+                FilterRow(
+                    selected = state.filter,
+                    onSelect = viewModel::setFilter,
+                )
+                if (state.isLoading) {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                } else if (state.items.isEmpty()) {
+                    EmptyState(modifier = Modifier.fillMaxSize())
+                } else {
+                    ItemList(
+                        items       = state.items,
+                        settings    = state.settings,
+                        onItemClick = onNavigateToDetail,
+                    )
+                }
             }
+        }
+
+        // AgentSheet is an in-tree full-screen overlay (not a Dialog window)
+        // so it inherits window insets from the Activity automatically.
+        if (showAgentSheet) {
+            AgentSheet(
+                onDismiss     = { showAgentSheet = false },
+                onAddManually = { pendingItem ->
+                    if (pendingItem == null) {
+                        // Failure/fallback path: dismiss sheet, open blank form
+                        showAgentSheet = false
+                        onNavigateToForm(null)
+                    } else {
+                        // Edit path: keep sheet alive so back returns to ConfirmAdd
+                        onNavigateToForm(pendingItem.toPrefillJson())
+                    }
+                },
+                viewModel     = agentViewModel,
+            )
         }
     }
 }
